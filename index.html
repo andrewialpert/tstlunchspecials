@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TST Lunch Specials</title>
+<meta name="description" content="Lunch specials near the office, rated by TST staff.">
+<meta name="theme-color" content="#E0301E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='40' fill='%23E0301E'/%3E%3Cpath d='M0 40h16a8 8 0 0 1-16 0zm16 0h16a8 8 0 0 1-16 0zm16 0h16a8 8 0 0 1-16 0zm16 0h16a8 8 0 0 1-16 0z' fill='%23E0301E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap">
+<style>
+:root {
+  --paper: #FFFFFF;
+  --ink: #1B2A4A;
+  --muted: #5B6478;
+  --line: #E3E6EC;
+  --line-strong: #B9C0CC;
+  --wash: #F3F5F8;
+  --tomato: #E0301E;
+  --tomato-2: #CC2817;
+  --mustard: #F2B200;
+  --mustard-wash: #FFF3C4;
+  --font: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+html:has(dialog[open]) { overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.vh {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.muted { color: var(--muted); }
+.ic { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ic.star, .ic.star-fill { fill: currentColor; stroke: none; }
+.ic.star-fill { color: var(--mustard); }
+
+/* Preview strip (sample data only) */
+.preview-bar {
+  background: var(--mustard-wash);
+  font-size: 14px;
+  padding: 8px 20px;
+  text-align: center;
+}
+
+/* Awning */
+.awning {
+  position: relative;
+  color: #fff;
+  background: repeating-linear-gradient(90deg, var(--tomato) 0 36px, var(--tomato-2) 36px 72px);
+  padding: calc(env(safe-area-inset-top) + 26px) 20px 22px;
+  margin-bottom: 12px;
+}
+.awning::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  height: 12px;
+  background:
+    radial-gradient(ellipse 18px 12px at 18px 0, var(--tomato) 98%, transparent 100%) 0 0 / 72px 12px repeat-x,
+    radial-gradient(ellipse 18px 12px at 54px 0, var(--tomato-2) 98%, transparent 100%) 0 0 / 72px 12px repeat-x;
+}
+.awning-inner { max-width: 1280px; margin: 0 auto; }
+.wordmark {
+  margin: 0;
+  font-weight: 900;
+  font-stretch: 125%;
+  font-size: clamp(34px, 9.5vw, 60px);
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+}
+.tagline { margin: 10px 0 0; font-size: 15px; max-width: 40ch; }
+
+/* Layout */
+.layout { max-width: 1280px; margin: 0 auto; }
+.list-col { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.map-col { display: none; }
+body[data-view="map"] .list-body { display: none; }
+body[data-view="map"] .map-col { display: block; padding: 0 20px calc(96px + env(safe-area-inset-bottom)); }
+
+.today {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 20px 12px;
+}
+.today h2 { margin: 0; font-size: 24px; font-weight: 800; line-height: 1.2; }
+.today p { margin: 2px 0 0; color: var(--muted); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px;
+  padding: 9px 16px;
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--ink);
+}
+.btn:hover { background: var(--wash); }
+.btn-primary { background: var(--tomato); border-color: var(--tomato); color: #fff; }
+.btn-primary:hover { background: var(--tomato-2); border-color: var(--tomato-2); }
+.btn-ghost { border-color: transparent; background: none; }
+.link-btn {
+  border: 0; background: none; padding: 4px 0;
+  font-weight: 600; text-decoration: underline; text-underline-offset: 3px;
+  color: var(--ink);
+}
+.add-btn {
+  position: fixed;
+  z-index: 10;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  padding: 12px 22px;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(27, 42, 74, 0.25);
+  white-space: nowrap;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 8px;
+  padding: 10px 20px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.seg { order: 1; display: inline-flex; border: 1.5px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: none; padding: 6px 16px; font-weight: 700; min-height: 36px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.sort { order: 2; margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.sort select {
+  font-weight: 700; color: var(--ink); font-size: 15px;
+  border: 1.5px solid var(--line-strong); border-radius: 8px; padding: 6px 10px; background: #fff; min-height: 36px;
+}
+.chips { order: 3; flex-basis: 100%; display: flex; gap: 8px; }
+.chip {
+  border: 1.5px solid var(--line-strong); background: #fff; border-radius: 999px;
+  padding: 5px 14px; font-weight: 700; font-size: 14px; min-height: 34px;
+}
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.sort-note { margin: 0; padding: 10px 20px; font-size: 14px; color: var(--muted); border-bottom: 1px solid var(--line); }
+
+/* Specials list */
+.list { list-style: none; margin: 0; padding: 0; }
+.row { border-bottom: 1px solid var(--line); }
+.row-btn {
+  display: block; width: 100%;
+  padding: 16px 20px 15px;
+  border: 0; background: none; text-align: left;
+}
+.row-btn:hover { background: var(--wash); }
+.row-place { display: block; font-size: 14px; font-weight: 700; color: var(--muted); }
+.row-main { display: flex; align-items: flex-end; gap: 8px; margin-top: 1px; }
+.row-title { flex: 0 1 auto; font-size: 19px; font-weight: 700; line-height: 1.25; }
+.leader { flex: 1 1 16px; min-width: 16px; border-bottom: 2px dotted var(--line-strong); transform: translateY(-6px); }
+.row-price, .d-price {
+  font-stretch: 75%; font-weight: 800; color: var(--tomato);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.row-price { font-size: 26px; flex: none; }
+.row-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 6px; font-size: 14px; color: var(--muted); }
+.meta-item { display: inline-flex; align-items: center; gap: 5px; }
+.meta-item .ic { width: 15px; height: 15px; }
+.row-fine { display: block; margin-top: 4px; font-size: 14px; font-style: italic; }
+.row-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; font-size: 14px; }
+.score { display: inline-flex; align-items: center; gap: 5px; }
+.score strong { font-size: 15px; }
+.score-count, .score-none { color: var(--muted); }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 13px; font-weight: 700; }
+.tag-warn { background: var(--mustard-wash); }
+.tag-muted { background: var(--wash); color: var(--muted); }
+
+.empty { padding: 32px 20px; }
+.empty h3 { margin: 0 0 6px; font-size: 19px; }
+.empty p { margin: 0 0 14px; color: var(--muted); }
+.empty-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.foot { padding: 24px 20px; }
+
+/* Map */
+.map {
+  position: relative; overflow: hidden;
+  height: 62vh; min-height: 360px;
+  border-radius: 12px;
+  background: var(--wash);
+  display: flex; align-items: center; justify-content: center;
+}
+.map-grid {
+  position: absolute; inset: -50%;
+  background-image:
+    linear-gradient(var(--line) 2px, transparent 2px),
+    linear-gradient(90deg, var(--line-strong) 3px, transparent 3px);
+  background-size: 100% 22px, 96px 100%;
+  transform: rotate(29deg);
+  opacity: 0.7;
+}
+.map-note {
+  position: relative; max-width: 30ch; margin: 20px;
+  background: #fff; border-radius: 12px; padding: 18px 20px;
+  box-shadow: 0 4px 16px rgba(27, 42, 74, 0.12);
+}
+.map-note strong { display: block; font-size: 17px; }
+.map-note p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+
+/* Sheets */
+dialog { color: var(--ink); }
+dialog::backdrop { background: rgba(27, 42, 74, 0.45); }
+dialog.sheet {
+  inset: auto 0 0 0;
+  margin: 0;
+  width: 100%; max-width: 100%;
+  max-height: 92dvh;
+  padding: 0; border: 0;
+  border-radius: 18px 18px 0 0;
+  background: var(--paper);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+dialog.sheet[open] { animation: sheet-up 0.22s ease-out; }
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet-inner { padding: 8px 20px calc(28px + env(safe-area-inset-bottom)); }
+.sheet-head {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 0 -20px; padding: 12px 20px 10px;
+  background: var(--paper);
+}
+.sheet-head h2 { margin: 0; font-size: 21px; font-weight: 800; }
+.sheet-head.bare { justify-content: flex-end; padding-bottom: 0; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 999px;
+  border: 0; background: var(--wash);
+}
+.icon-btn .ic { width: 20px; height: 20px; }
+
+dialog.small {
+  margin: auto;
+  width: min(420px, calc(100% - 32px));
+  padding: 22px 22px 20px; border: 0; border-radius: 16px;
+}
+dialog.small h2 { margin: 0 0 4px; font-size: 21px; font-weight: 800; }
+dialog.small p { margin: 0 0 14px; color: var(--muted); }
+
+/* Detail */
+.d-place { margin: 0; font-weight: 700; color: var(--muted); }
+.d-title { margin: 2px 0 6px; font-size: 26px; font-weight: 800; line-height: 1.15; }
+.d-price { margin: 0 0 16px; font-size: 40px; }
+.d-photo { display: block; width: 100%; max-height: 260px; object-fit: cover; border-radius: 10px; margin: 0 0 16px; background: var(--wash); }
+.d-facts { margin: 0 0 18px; display: grid; gap: 10px; }
+.d-facts div { display: grid; grid-template-columns: 88px 1fr; gap: 12px; }
+.d-facts dt { font-weight: 700; color: var(--muted); font-size: 15px; }
+.d-facts dd { margin: 0; }
+.d-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.d-actions .btn-primary { flex-basis: 100%; }
+.d-status { margin: 12px 0 0; font-size: 14px; color: var(--muted); }
+.d-status.is-warn { color: var(--ink); background: var(--mustard-wash); padding: 8px 10px; border-radius: 6px; }
+.d-section { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; }
+.d-section h3 { margin: 0 0 8px; font-size: 17px; font-weight: 800; }
+.d-score { display: flex; align-items: center; gap: 6px; margin: 0; }
+.d-score strong { font-size: 28px; line-height: 1; }
+.d-score .ic { width: 24px; height: 24px; }
+.d-section > p { margin: 0; }
+.reviews { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 14px; }
+.review p { margin: 0; }
+.review-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 15px; }
+.stars-row { display: inline-flex; color: #C9CED8; }
+.stars-row .ic { width: 14px; height: 14px; }
+.stars-row .on { color: var(--mustard); }
+.credits { margin: 22px 0 0; font-size: 14px; color: var(--muted); }
+
+/* Star input */
+.star-input { border: 0; padding: 0; margin: 0 0 12px; display: flex; gap: 2px; }
+.star-input input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.star-input label { padding: 2px; color: #C9CED8; cursor: pointer; border-radius: 6px; }
+.star-input label .ic { width: 38px; height: 38px; }
+.star-input input:focus-visible + label { outline: 3px solid var(--ink); outline-offset: 0; }
+.star-input[data-value="1"] label:nth-of-type(-n+1),
+.star-input[data-value="2"] label:nth-of-type(-n+2),
+.star-input[data-value="3"] label:nth-of-type(-n+3),
+.star-input[data-value="4"] label:nth-of-type(-n+4),
+.star-input[data-value="5"] label:nth-of-type(-n+5) { color: var(--mustard); }
+
+/* Forms */
+.field { margin: 0 0 16px; padding: 0; border: 0; min-width: 0; }
+.field > label, .field > legend, .field-label { display: block; font-weight: 700; margin-bottom: 6px; padding: 0; }
+.field-label { margin-top: 2px; }
+input[type="text"], input:not([type]), input[type="url"], input[type="time"], textarea {
+  width: 100%;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  font-size: 16px;
+  min-height: 44px;
+}
+textarea { resize: vertical; line-height: 1.4; }
+input:focus, textarea:focus, select:focus { border-color: var(--ink); }
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+[aria-invalid="true"] { border-color: var(--tomato) !important; }
+.hint { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.field-error, .form-error { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: #B8230F; }
+.price-input { display: flex; align-items: center; gap: 6px; max-width: 160px; }
+.price-input span { font-weight: 800; font-size: 20px; }
+.day-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.day { position: relative; }
+.day input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.day span {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 42px; min-height: 40px; padding: 0 4px;
+  border: 1.5px solid var(--line-strong); border-radius: 8px;
+  font-weight: 700; font-size: 15px; cursor: pointer;
+}
+.day input:checked + span { background: var(--ink); border-color: var(--ink); color: #fff; }
+.day input:focus-visible + span { outline: 3px solid var(--ink); outline-offset: 2px; }
+.day-quick { display: flex; gap: 16px; margin-top: 6px; }
+.hours-row { display: flex; align-items: center; gap: 10px; }
+.hours-row input { max-width: 150px; }
+.form-actions, .form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
+.saved-note { font-size: 14px; font-weight: 700; color: var(--muted); }
+
+/* Admin */
+.btn-danger { border-color: #B8230F; color: #B8230F; }
+.btn-danger:hover { background: #FDECEA; }
+.btn-danger-solid { background: #B8230F; border-color: #B8230F; color: #fff; }
+.btn-danger-solid:hover { background: #961C0C; border-color: #961C0C; }
+.danger-link { color: #B8230F; font-size: 14px; }
+.danger-note { margin: 0 0 8px; font-weight: 700; }
+.admin { background: var(--wash); margin-left: -20px; margin-right: -20px; padding: 18px 20px 20px; border-top: 0; }
+.admin-sub { margin: 18px 0 6px; font-size: 15px; font-weight: 800; }
+.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.history li { background: #fff; border-radius: 8px; padding: 10px 12px; }
+.history p { margin: 0 0 2px; font-size: 15px; }
+.history .muted { font-size: 14px; }
+.admin-line { margin-top: 18px; font-size: 14px; }
+
+/* About */
+.about p { margin: 0 0 14px; }
+.about .you { padding-top: 14px; border-top: 1px solid var(--line); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  inset: auto auto calc(88px + env(safe-area-inset-bottom)) 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  border: 0;
+  background: var(--ink); color: #fff;
+  padding: 10px 16px; border-radius: 10px;
+  font-weight: 700; font-size: 15px;
+  max-width: calc(100% - 32px);
+  width: max-content;
+  box-shadow: 0 6px 18px rgba(27, 42, 74, 0.25);
+}
+.toast { display: none; }
+.toast.is-shown { display: block; }
+.toast:popover-open { display: block; }
+
+@media (min-width: 960px) {
+  .awning { padding: 34px 32px 28px; }
+  .tagline { font-size: 17px; }
+  .layout { display: grid; grid-template-columns: minmax(460px, 560px) 1fr; align-items: start; }
+  .list-col { padding-bottom: 40px; }
+  .toolbar { position: sticky; top: 0; z-index: 5; }
+  .map-col, body[data-view="map"] .map-col { display: block; position: sticky; top: 0; height: 100dvh; padding: 28px 20px 24px 24px; }
+  body[data-view="map"] .list-body { display: block; }
+  .map { height: 100%; }
+  .today { padding: 26px 20px 14px; }
+  .seg { display: none; }
+  .chips { order: 1; flex-basis: auto; }
+  .sort { order: 2; }
+  .add-btn { position: static; transform: none; box-shadow: none; border-radius: 8px; padding: 9px 16px; }
+  dialog.sheet {
+    inset: 0 0 0 auto;
+    width: 460px; height: 100dvh; max-height: 100dvh;
+    border-radius: 0;
+  }
+  @keyframes sheet-up { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .toast { inset: auto auto 32px 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.sheet[open] { animation: none; }
+}
+</style>
+</head>
+<body data-view="list">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.6l2.85 6.03 6.6.8-4.87 4.53 1.27 6.54L12 17.3l-5.85 3.2 1.27-6.54L2.55 9.43l6.6-.8z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.4a7 7 0 0 1 14 0C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.6" r="2.4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+
+<div class="preview-bar" id="preview-bar" hidden>Preview with sample specials. Changes reset when you reload.</div>
+
+<header class="awning">
+  <div class="awning-inner">
+    <h1 class="wordmark">TST Lunch Specials</h1>
+    <p class="tagline">Lunch specials near the office, rated by TST staff.</p>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="list-col" aria-label="Specials">
+    <div class="today">
+      <div>
+        <h2 id="today-date"></h2>
+        <p id="today-count"></p>
+      </div>
+      <button type="button" class="btn btn-primary add-btn" data-action="add"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Add a special</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-action="view" data-view="list" aria-pressed="true">List</button>
+        <button type="button" data-action="view" data-view="map" aria-pressed="false">Map</button>
+      </div>
+      <div class="chips" role="group" aria-label="Filters">
+        <button type="button" class="chip" data-action="filter" data-filter="today" aria-pressed="true">Today</button>
+        <button type="button" class="chip" data-action="filter" data-filter="budget" aria-pressed="false">$15 and under</button>
+      </div>
+      <label class="sort">Sort
+        <select id="sort">
+          <option value="top">Top rated</option>
+          <option value="closest">Closest</option>
+          <option value="newest">Newest</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="list-body">
+      <p class="sort-note" id="sort-note" hidden></p>
+      <ul class="list" id="list"></ul>
+      <div class="empty" id="empty" hidden></div>
+      <footer class="foot">
+        <button type="button" class="link-btn" data-action="about">How this works</button>
+      </footer>
+    </div>
+  </section>
+
+  <section class="map-col" aria-label="Map">
+    <div class="map" id="map">
+      <div class="map-grid" aria-hidden="true"></div>
+      <div class="map-note">
+        <strong>The map comes in the Google step</strong>
+        <p>Once Google Maps is connected, every special shows up here as a pin around TST.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
+  <div class="sheet-inner" id="sheet-body"></div>
+</dialog>
+
+<dialog class="small" id="name-dialog" aria-labelledby="name-title">
+  <form id="name-form" novalidate>
+    <h2 id="name-title">What's your first name?</h2>
+    <p>It shows next to what you add, edit and rate.</p>
+    <div class="field">
+      <label class="vh" for="name-input">First name</label>
+      <input id="name-input" name="name" maxlength="30" autocomplete="given-name" autocapitalize="words">
+      <p class="field-error" id="name-error" hidden></p>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save name</button>
+      <button type="button" class="btn btn-ghost" data-action="name-cancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" popover="manual"></div>
+
+<script type="module">
+/* ============================================================
+   Settings
+   ============================================================ */
+const FIREBASE_VERSION = '13.3.0';
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyAbhjU06aTcavhCvSYbxpegn6hmrTkYwM4',
+  authDomain: 'tstlunchspecials.firebaseapp.com',
+  projectId: 'tstlunchspecials',
+  storageBucket: 'tstlunchspecials.firebasestorage.app',
+  messagingSenderId: '775162854438',
+  appId: '1:775162854438:web:1d0db9f3db8885488f3ae7',
+};
+
+const CONFIG = {
+  // The office. Replaced with the exact spot in the Google Maps step.
+  office: { lat: 40.7739, lng: -73.9541, label: 'TST' },
+  outdatedAfterDays: 60,   // "May be outdated" after this long without a confirmation
+  minRatingsForScore: 3,   // a special shows a score once this many people rate it
+  budgetPrice: 15,         // the "$15 and under" filter
+};
+
+// Add ?sample to the address to see the page with made-up specials (nothing is saved).
+const SAMPLE_MODE = new URLSearchParams(location.search).has('sample');
+
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon first
+const DAY_MS = 86400000;
+const EDITABLE_FIELDS = ['restaurant', 'address', 'title', 'price', 'days', 'start', 'end', 'finePrint', 'photoUrl', 'placeId', 'lat', 'lng'];
+
+/* ============================================================
+   Small helpers
+   ============================================================ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const icon = (name, cls = '') => `<svg class="ic ${name === 'star' ? 'star' : ''} ${cls}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
+const clean = (v) => String(v ?? '').replace(/\s+/g, ' ').trim();
+const randomId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+const storage = {
+  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+  set(key, value) { try { localStorage.setItem(key, value); } catch { /* private mode etc. */ } },
+};
+
+// Copies exactly the fields people can edit, nothing else.
+function pickEditable(o) {
+  const out = {};
+  for (const k of EDITABLE_FIELDS) out[k] = o[k];
+  return out;
+}
+
+// Turns any error into one plain sentence for the person using the site.
+function friendlyError(err) {
+  const code = String(err?.code || '');
+  if (code.includes('permission-denied')) return 'That change wasn’t allowed. Reload the page and try again.';
+  if (code.includes('not-found')) return 'That special no longer exists.';
+  if (code.includes('unavailable') || code.includes('network-request-failed') || code.includes('deadline-exceeded')) return 'Couldn’t reach the server. Check your connection and try again.';
+  if (code.includes('popup-blocked')) return 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.';
+  if (code.includes('operation-not-allowed') || code.includes('admin-restricted-operation')) return 'Sign-in isn’t turned on in Firebase yet.';
+  if (code.includes('unauthorized-domain')) return 'This web address isn’t on Firebase’s list of allowed domains yet.';
+  return err?.message || 'Something went wrong. Try again.';
+}
+
+/* ============================================================
+   Formatting (pure functions)
+   ============================================================ */
+function formatPrice(n) {
+  return Number.isInteger(n) ? `$${n}` : `$${Number(n).toFixed(2)}`;
+}
+
+function formatDays(days) {
+  const set = new Set(days);
+  if (set.size === 7) return 'Every day';
+  const idx = WEEK_ORDER.map((d, i) => (set.has(d) ? i : -1)).filter((i) => i >= 0);
+  if (!idx.length) return '';
+  const runs = [];
+  let start = idx[0], prev = idx[0];
+  for (let i = 1; i < idx.length; i++) {
+    if (idx[i] === prev + 1) { prev = idx[i]; continue; }
+    runs.push([start, prev]); start = prev = idx[i];
+  }
+  runs.push([start, prev]);
+  const name = (i) => DAY_SHORT[WEEK_ORDER[i]];
+  return runs.map(([a, b]) => (a === b ? name(a) : b === a + 1 ? `${name(a)}, ${name(b)}` : `${name(a)}–${name(b)}`)).join(', ');
+}
+
+function formatTime(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  const suffix = h < 12 ? 'am' : 'pm';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m ? `${h12}:${String(m).padStart(2, '0')}${suffix}` : `${h12}${suffix}`;
+}
+
+function whenText(s) {
+  const days = formatDays(s.days || []);
+  const hours = s.start && s.end ? `${formatTime(s.start)}–${formatTime(s.end)}` : '';
+  return [days, hours].filter(Boolean).join(', ');
+}
+
+function relTime(ts) {
+  if (!ts) return '';
+  const startOfDay = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(ts)) / DAY_MS);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) { const w = Math.floor(days / 7); return w === 1 ? 'a week ago' : `${w} weeks ago`; }
+  if (days < 365) { const mo = Math.floor(days / 30); return mo === 1 ? 'a month ago' : `${mo} months ago`; }
+  const y = Math.floor(days / 365); return y === 1 ? 'a year ago' : `${y} years ago`;
+}
+
+function walkMinutes(s) {
+  if (typeof s.lat !== 'number' || typeof s.lng !== 'number') return null;
+  const R = 6371000, rad = (x) => (x * Math.PI) / 180;
+  const dLat = rad(s.lat - CONFIG.office.lat), dLng = rad(s.lng - CONFIG.office.lng);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(CONFIG.office.lat)) * Math.cos(rad(s.lat)) * Math.sin(dLng / 2) ** 2;
+  const meters = 2 * R * Math.asin(Math.sqrt(a));
+  return Math.max(1, Math.round((meters * 1.25) / 80)); // street grid detour, ~80 m per minute
+}
+
+function mapsUrl(s) {
+  const q = [s.restaurant, s.address].filter(Boolean).join(' ');
+  const place = s.placeId ? `&query_place_id=${encodeURIComponent(s.placeId)}` : '';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}${place}`;
+}
+
+/* ============================================================
+   Rules about specials (pure functions)
+   ============================================================ */
+const runsToday = (s) => (s.days || []).includes(new Date().getDay());
+const lastConfirmed = (s) => s.confirmedAt ?? s.createdAt;
+const isOutdated = (s) => Date.now() - lastConfirmed(s) > CONFIG.outdatedAfterDays * DAY_MS;
+
+function ratingStats(ratings, specials) {
+  const live = new Set(specials.map((s) => s.id));
+  const m = new Map();
+  for (const r of ratings) {
+    if (!live.has(r.specialId)) continue;
+    const s = m.get(r.specialId) || { count: 0, sum: 0 };
+    s.count += 1; s.sum += r.stars;
+    m.set(r.specialId, s);
+  }
+  for (const s of m.values()) s.avg = s.sum / s.count;
+  return m;
+}
+
+function hasScore(stats, id) {
+  return (stats.get(id)?.count ?? 0) >= CONFIG.minRatingsForScore;
+}
+
+function byWalk(a, b) {
+  const wa = walkMinutes(a), wb = walkMinutes(b);
+  if (wa == null && wb == null) return a.restaurant.localeCompare(b.restaurant);
+  if (wa == null) return 1;
+  if (wb == null) return -1;
+  return wa - wb || a.restaurant.localeCompare(b.restaurant);
+}
+
+function visibleSpecials(specials, stats, ui) {
+  let list = specials.slice();
+  if (ui.today) list = list.filter(runsToday);
+  if (ui.budget) list = list.filter((s) => s.price <= CONFIG.budgetPrice);
+  if (ui.sort === 'closest') list.sort(byWalk);
+  else if (ui.sort === 'newest') list.sort((a, b) => b.createdAt - a.createdAt);
+  else {
+    list.sort((a, b) => {
+      const sa = hasScore(stats, a.id), sb = hasScore(stats, b.id);
+      if (sa !== sb) return sa ? -1 : 1;
+      if (sa && sb) {
+        const A = stats.get(a.id), B = stats.get(b.id);
+        if (Math.abs(B.avg - A.avg) > 1e-9) return B.avg - A.avg;
+        if (B.count !== A.count) return B.count - A.count;
+      }
+      return byWalk(a, b);
+    });
+  }
+  return list;
+}
+
+// The same limits are enforced again by the database rules.
+function validateSpecial(raw) {
+  const errors = {}, data = {};
+  data.restaurant = clean(raw.restaurant);
+  if (!data.restaurant) errors.restaurant = 'Add the restaurant name.';
+  else if (data.restaurant.length > 60) errors.restaurant = 'Keep the name under 60 characters.';
+
+  data.address = clean(raw.address);
+  if (data.address.length > 120) errors.address = 'Keep the address under 120 characters.';
+
+  data.title = clean(raw.title);
+  if (!data.title) errors.title = 'Say what the special is.';
+  else if (data.title.length > 80) errors.title = 'Keep it under 80 characters.';
+
+  const p = String(raw.price ?? '').trim().replace(/^\$/, '');
+  if (!p) errors.price = 'Add the price.';
+  else if (!/^\d{1,3}(\.\d{1,2})?$/.test(p) || Number(p) <= 0 || Number(p) > 200) errors.price = 'Use a price like 12 or 12.50.';
+  else data.price = Math.round(Number(p) * 100) / 100;
+
+  data.days = [...new Set((raw.days || []).map(Number))].filter((n) => Number.isInteger(n) && n >= 0 && n <= 6).sort((a, b) => a - b);
+  if (!data.days.length) errors.days = 'Pick at least one day.';
+
+  data.start = raw.start || '';
+  data.end = raw.end || '';
+  if (!!data.start !== !!data.end) errors.hours = 'Add both a start and end time, or leave both blank.';
+  else if (data.start && data.end <= data.start) errors.hours = 'The end time needs to be after the start time.';
+
+  data.finePrint = clean(raw.finePrint);
+  if (data.finePrint.length > 200) errors.finePrint = 'Keep the fine print under 200 characters.';
+
+  data.photoUrl = String(raw.photoUrl ?? '').trim();
+  if (data.photoUrl && !/^https:\/\/\S+$/i.test(data.photoUrl)) errors.photoUrl = 'Use a link that starts with https://';
+  else if (data.photoUrl.length > 500) errors.photoUrl = 'That link is too long.';
+
+  return { errors, data };
+}
+
+/* ============================================================
+   Store 1 of 2: Firebase (the real site)
+   The page only ever talks to the functions returned here.
+   ============================================================ */
+async function createFirebaseStore() {
+  const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
+  const [{ initializeApp }, A, F] = await Promise.all([
+    import(`${base}/firebase-app.js`),
+    import(`${base}/firebase-auth.js`),
+    import(`${base}/firebase-firestore.js`),
+  ]);
+  const app = initializeApp(FIREBASE_CONFIG);
+  const auth = A.getAuth(app);
+  const db = F.getFirestore(app);
+
+  const ms = (t) => (t && typeof t.toMillis === 'function' ? t.toMillis() : null);
+  const userInfo = (u) => ({
+    uid: u?.uid ?? null,
+    isAdmin: !!u && !u.isAnonymous && (u.providerData || []).some((p) => p.providerId === 'google.com'),
+    email: u?.email ?? '',
+  });
+
+  // Everyone gets a quiet anonymous sign-in so they can post without an account.
+  const userListeners = new Set();
+  let resolveFirstUser;
+  const firstUser = new Promise((r) => { resolveFirstUser = r; });
+  A.onAuthStateChanged(auth, (u) => {
+    if (!u) {
+      A.signInAnonymously(auth).catch((err) => { console.warn('Anonymous sign-in failed', err); resolveFirstUser(null); });
+      return;
+    }
+    resolveFirstUser(u);
+    userListeners.forEach((fn) => fn(userInfo(u)));
+  });
+  async function requireUser() {
+    await firstUser;
+    if (!auth.currentUser) throw new Error('Couldn’t sign you in to save changes. Reload the page and try again.');
+    return auth.currentUser;
+  }
+
+  function toSpecial(d) {
+    const x = d.data({ serverTimestamps: 'estimate' });
+    if (typeof x.title !== 'string' || typeof x.restaurant !== 'string' || typeof x.price !== 'number' || !Array.isArray(x.days)) return null;
+    return {
+      id: d.id,
+      restaurant: x.restaurant, address: x.address ?? '', title: x.title, price: x.price, days: x.days,
+      start: x.start ?? '', end: x.end ?? '', finePrint: x.finePrint ?? '', photoUrl: x.photoUrl ?? '',
+      placeId: x.placeId ?? '', lat: x.lat ?? null, lng: x.lng ?? null, rev: x.rev ?? 0,
+      createdAt: ms(x.createdAt) ?? Date.now(), createdBy: x.createdBy ?? null, createdByName: x.createdByName ?? '',
+      editedAt: ms(x.editedAt), editedByName: x.editedByName ?? null,
+      confirmedAt: ms(x.confirmedAt), confirmedByName: x.confirmedByName ?? null,
+    };
+  }
+  function toRating(d) {
+    const x = d.data({ serverTimestamps: 'estimate' });
+    if (typeof x.stars !== 'number' || typeof x.specialId !== 'string') return null;
+    return {
+      id: d.id, specialId: x.specialId, uid: x.uid, name: x.name ?? '', stars: x.stars, review: x.review ?? '',
+      createdAt: ms(x.createdAt) ?? Date.now(), updatedAt: ms(x.updatedAt) ?? ms(x.createdAt) ?? Date.now(),
+    };
+  }
+
+  // One edit = save the current version to history + apply the change, in one step.
+  // The database rules refuse an edit that doesn't save history this way.
+  async function editWithHistory(id, makeNext, name) {
+    const user = await requireUser();
+    const ref = F.doc(db, 'specials', id);
+    await F.runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw Object.assign(new Error('That special no longer exists.'), { code: 'not-found' });
+      const cur = snap.data();
+      const next = await makeNext(cur, tx);
+      const now = F.serverTimestamp();
+      tx.set(F.doc(db, 'specials', id, 'history', String(cur.rev)), {
+        ...pickEditable(cur),
+        versionAt: cur.editedAt ?? cur.createdAt,
+        versionByName: cur.editedAt ? cur.editedByName : cur.createdByName,
+        savedAt: now, savedBy: user.uid, savedByName: name,
+      });
+      tx.update(ref, {
+        ...next,
+        rev: cur.rev + 1,
+        editedAt: now, editedBy: user.uid, editedByName: name,
+        confirmedAt: now, confirmedBy: user.uid, confirmedByName: name,
+      });
+    });
+  }
+
+  return {
+    mode: 'live',
+    onUser(fn) { userListeners.add(fn); if (auth.currentUser) fn(userInfo(auth.currentUser)); },
+
+    subscribe(onData, onError) {
+      let specials = null, ratings = null;
+      const emit = () => { if (specials && ratings) onData({ specials, ratings }); };
+      const u1 = F.onSnapshot(F.collection(db, 'specials'), (snap) => { specials = snap.docs.map(toSpecial).filter(Boolean); emit(); }, onError);
+      const u2 = F.onSnapshot(F.collection(db, 'ratings'), (snap) => { ratings = snap.docs.map(toRating).filter(Boolean); emit(); }, onError);
+      return () => { u1(); u2(); };
+    },
+
+    async addSpecial(data, name) {
+      const user = await requireUser();
+      const ref = F.doc(F.collection(db, 'specials'));
+      const now = F.serverTimestamp();
+      const fields = pickEditable({ placeId: '', lat: null, lng: null, ...data });
+      await F.setDoc(ref, {
+        ...fields,
+        rev: 0,
+        createdAt: now, createdBy: user.uid, createdByName: name,
+        editedAt: null, editedBy: null, editedByName: null,
+        confirmedAt: now, confirmedBy: user.uid, confirmedByName: name,
+      });
+      return ref.id;
+    },
+
+    async updateSpecial(id, data, name) {
+      await editWithHistory(id, (cur) => pickEditable({ ...cur, ...data }), name);
+    },
+
+    async restoreVersion(id, rev, name) {
+      await editWithHistory(id, async (cur, tx) => {
+        const h = await tx.get(F.doc(db, 'specials', id, 'history', String(rev)));
+        if (!h.exists()) throw new Error('That version is gone.');
+        return pickEditable(h.data());
+      }, name);
+    },
+
+    async confirmSpecial(id, name) {
+      const user = await requireUser();
+      await F.updateDoc(F.doc(db, 'specials', id), { confirmedAt: F.serverTimestamp(), confirmedBy: user.uid, confirmedByName: name });
+    },
+
+    async saveRating(specialId, { stars, review }, name) {
+      const user = await requireUser();
+      const ref = F.doc(db, 'ratings', `${specialId}_${user.uid}`);
+      await F.runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        const now = F.serverTimestamp();
+        if (snap.exists()) tx.update(ref, { name, stars, review, updatedAt: now });
+        else tx.set(ref, { specialId, uid: user.uid, name, stars, review, createdAt: now, updatedAt: now });
+      });
+    },
+
+    async getHistory(id) {
+      const snap = await F.getDocs(F.query(F.collection(db, 'specials', id, 'history'), F.orderBy('savedAt', 'desc')));
+      return snap.docs.map((d) => {
+        const x = d.data();
+        return { rev: d.id, ...pickEditable(x), versionAt: ms(x.versionAt), versionByName: x.versionByName ?? '', savedAt: ms(x.savedAt), savedByName: x.savedByName ?? '' };
+      });
+    },
+
+    async deleteSpecial(id) { await F.deleteDoc(F.doc(db, 'specials', id)); },
+    async deleteRating(ratingId) { await F.deleteDoc(F.doc(db, 'ratings', ratingId)); },
+
+    async signInAdmin() { await A.signInWithPopup(auth, new A.GoogleAuthProvider()); },
+    async signOutAdmin() { await A.signOut(auth); },
+  };
+}
+
+/* ============================================================
+   Store 2 of 2: made-up specials kept in memory (?sample only)
+   ============================================================ */
+function sampleData() {
+  const now = Date.now();
+  const ago = (d) => now - d * DAY_MS;
+  const sp = (id, o) => ({
+    id, address: '', finePrint: '', photoUrl: '', start: '', end: '', placeId: '', rev: 0,
+    createdBy: 'sample', editedAt: null, editedByName: null, ...o,
+  });
+  const specials = [
+    sp('s1', { restaurant: 'Lexington Taqueria', address: '1520 3rd Ave', lat: 40.7726, lng: -73.9567, title: 'Burrito + beer', price: 15, days: [1, 2, 3, 4, 5], start: '11:00', end: '15:00', finePrint: 'Swap the beer for a soft drink.', createdAt: ago(24), createdByName: 'Sarah', confirmedAt: ago(5), confirmedByName: 'Dana' }),
+    sp('s2', { restaurant: 'Golden Lotus Kitchen', address: '1641 2nd Ave', lat: 40.7752, lng: -73.9518, title: 'Lunch combo with rice and an egg roll', price: 11.5, days: [1, 2, 3, 4, 5, 6], start: '11:00', end: '15:30', finePrint: 'Soup instead of the egg roll for $1 more.', createdAt: ago(40), createdByName: 'Mike', confirmedAt: ago(12), confirmedByName: 'Ben', editedAt: ago(12), editedByName: 'Ben' }),
+    sp('s3', { restaurant: 'Sal’s Slice Shop', address: '1489 1st Ave', lat: 40.7718, lng: -73.9506, title: '2 slices + a can of soda', price: 8, days: [0, 1, 2, 3, 4, 5, 6], finePrint: 'Plain or pepperoni only.', createdAt: ago(31), createdByName: 'Josh', confirmedAt: ago(2), confirmedByName: 'Josh' }),
+    sp('s4', { restaurant: 'Yorkville Deli & Grocery', address: '1402 2nd Ave', lat: 40.7716, lng: -73.9558, title: 'Half sandwich + cup of soup', price: 13.95, days: [1, 2, 3, 4, 5], start: '11:00', end: '16:00', finePrint: 'Soup changes daily.', createdAt: ago(9), createdByName: 'Priya', confirmedAt: ago(9), confirmedByName: 'Priya' }),
+    sp('s5', { restaurant: 'Sakura Box', address: '1206 Lexington Ave', lat: 40.7753, lng: -73.9580, title: 'Bento lunch box', price: 16, days: [1, 2, 3, 4, 5], start: '11:30', end: '15:00', finePrint: 'Teriyaki chicken, salmon or tofu.', createdAt: ago(18), createdByName: 'Rachel', confirmedAt: ago(18), confirmedByName: 'Rachel' }),
+    sp('s6', { restaurant: 'Aegean Grill', address: '1560 York Ave', lat: 40.7710, lng: -73.9487, title: 'Chicken platter + drink', price: 14, days: [0, 1, 2, 3, 4, 5, 6], createdAt: ago(82), createdByName: 'Ben', confirmedAt: ago(75), confirmedByName: 'Ben' }),
+    sp('s7', { restaurant: 'Thai Basil House', address: '1590 3rd Ave', lat: 40.7769, lng: -73.9531, title: 'Any curry + spring roll', price: 13, days: [0, 2, 3, 4, 5, 6], start: '11:30', end: '15:00', finePrint: 'Brown rice is $1 extra.', createdAt: ago(15), createdByName: 'Dana', confirmedAt: ago(8), confirmedByName: 'Mike' }),
+    sp('s8', { restaurant: 'East End Diner', address: '1712 2nd Ave', lat: 40.7781, lng: -73.9500, title: 'Burger, fries + a soda', price: 14.5, days: [0, 6], start: '11:00', end: '16:00', finePrint: 'Turkey burger at no extra charge.', createdAt: ago(6), createdByName: 'Sarah', confirmedAt: ago(6), confirmedByName: 'Sarah' }),
+  ];
+  const r = (specialId, uid, name, stars, review, d) => ({ id: `${specialId}_${uid}`, specialId, uid, name, stars, review: review || '', createdAt: ago(d), updatedAt: ago(d) });
+  const ratings = [
+    r('s1', 'u1', 'Mike', 5, 'Burrito is huge. Go before 12:30 or the line is out the door.', 6),
+    r('s1', 'u2', 'Priya', 4, 'Ask for the salsa verde.', 10),
+    r('s1', 'u3', 'Dana', 5, '', 5),
+    r('s1', 'u4', 'Josh', 4, '', 14),
+    r('s1', 'u5', 'Ben', 4, '', 20),
+    r('s2', 'u5', 'Ben', 4, 'Good value. The egg roll is the weak link.', 12),
+    r('s2', 'u1', 'Mike', 3, '', 30),
+    r('s2', 'u6', 'Rachel', 4, '', 22),
+    r('s2', 'u2', 'Priya', 4, '', 8),
+    r('s3', 'u4', 'Josh', 4, 'Fast, and the slices are big.', 2),
+    r('s3', 'u1', 'Mike', 4, '', 25),
+    r('s3', 'u3', 'Dana', 3, '', 16),
+    r('s3', 'u7', 'Sarah', 5, '', 11),
+    r('s4', 'u2', 'Priya', 4, 'Turkey and swiss with the tomato soup is the move.', 9),
+    r('s5', 'u6', 'Rachel', 5, 'Get the salmon.', 17),
+    r('s5', 'u7', 'Sarah', 5, '', 13),
+    r('s5', 'u5', 'Ben', 4, '', 7),
+    r('s7', 'u3', 'Dana', 3, 'Curry is solid but the spring roll is tiny.', 8),
+    r('s7', 'u1', 'Mike', 4, '', 8),
+    r('s7', 'u4', 'Josh', 3, '', 3),
+    r('s8', 'u7', 'Sarah', 4, '', 6),
+    r('s8', 'u4', 'Josh', 5, 'Best fries in the neighborhood.', 4),
+  ];
+  return { specials, ratings };
+}
+
+function createSampleStore() {
+  let state = sampleData();
+  const history = new Map(); // specialId -> [versions]
+  const listeners = new Set();
+  const userListeners = new Set();
+  let uid = storage.get('tst-lunch-device');
+  if (!uid) { uid = 'dev_' + randomId(); storage.set('tst-lunch-device', uid); }
+  let isAdmin = new URLSearchParams(location.search).has('admin');
+  const info = () => ({ uid, isAdmin, email: isAdmin ? 'admin@example.com' : '' });
+  const emit = () => listeners.forEach((fn) => fn(state));
+  const findSpecial = (id) => state.specials.find((s) => s.id === id);
+  const notFound = () => Object.assign(new Error('That special no longer exists.'), { code: 'not-found' });
+  const denied = () => Object.assign(new Error('Only the site admin can do that.'), { code: 'permission-denied' });
+
+  function editWithHistory(id, next, name) {
+    const cur = findSpecial(id);
+    if (!cur) throw notFound();
+    const now = Date.now();
+    const list = history.get(id) || [];
+    list.unshift({ rev: String(cur.rev), ...pickEditable(cur), versionAt: cur.editedAt ?? cur.createdAt, versionByName: cur.editedAt ? cur.editedByName : cur.createdByName, savedAt: now, savedByName: name });
+    history.set(id, list);
+    state = { ...state, specials: state.specials.map((s) => (s.id === id ? { ...s, ...next, rev: s.rev + 1, editedAt: now, editedByName: name, confirmedAt: now, confirmedByName: name } : s)) };
+    emit();
+  }
+
+  return {
+    mode: 'sample',
+    onUser(fn) { userListeners.add(fn); fn(info()); },
+    subscribe(onData) { listeners.add(onData); onData(state); return () => listeners.delete(onData); },
+    async addSpecial(data, name) {
+      const now = Date.now();
+      const special = { placeId: '', lat: null, lng: null, ...data, id: 'sp_' + randomId(), rev: 0, createdAt: now, createdBy: uid, createdByName: name, confirmedAt: now, confirmedByName: name, editedAt: null, editedByName: null };
+      state = { ...state, specials: [...state.specials, special] };
+      emit();
+      return special.id;
+    },
+    async updateSpecial(id, data, name) { editWithHistory(id, pickEditable({ ...findSpecial(id), ...data }), name); },
+    async restoreVersion(id, rev, name) {
+      const v = (history.get(id) || []).find((h) => h.rev === String(rev));
+      if (!v) throw new Error('That version is gone.');
+      editWithHistory(id, pickEditable(v), name);
+    },
+    async confirmSpecial(id, name) {
+      if (!findSpecial(id)) throw notFound();
+      state = { ...state, specials: state.specials.map((s) => (s.id === id ? { ...s, confirmedAt: Date.now(), confirmedByName: name } : s)) };
+      emit();
+    },
+    async saveRating(specialId, { stars, review }, name) {
+      if (!findSpecial(specialId)) throw notFound();
+      const id = `${specialId}_${uid}`;
+      const now = Date.now();
+      const existing = state.ratings.find((r) => r.id === id);
+      const rating = { id, specialId, uid, name, stars, review, createdAt: existing?.createdAt ?? now, updatedAt: now };
+      state = { ...state, ratings: existing ? state.ratings.map((r) => (r.id === id ? rating : r)) : [...state.ratings, rating] };
+      emit();
+    },
+    async getHistory(id) { return (history.get(id) || []).slice(); },
+    async deleteSpecial(id) {
+      if (!isAdmin) throw denied();
+      state = { ...state, specials: state.specials.filter((s) => s.id !== id) };
+      emit();
+    },
+    async deleteRating(ratingId) {
+      if (!isAdmin) throw denied();
+      state = { ...state, ratings: state.ratings.filter((r) => r.id !== ratingId) };
+      emit();
+    },
+    async signInAdmin() { isAdmin = true; userListeners.forEach((fn) => fn(info())); },
+    async signOutAdmin() { isAdmin = false; userListeners.forEach((fn) => fn(info())); },
+  };
+}
+
+/* ============================================================
+   Page state
+   ============================================================ */
+let store = null;
+const ui = { view: 'list', today: true, budget: false, sort: 'top', sheet: null };
+let data = { specials: [], ratings: [] };
+let loaded = false;
+let loadError = null;
+let stats = new Map();
+const me = { uid: null, name: storage.get('tst-lunch-name') || '', isAdmin: false, email: '' };
+
+const els = {
+  date: $('#today-date'), count: $('#today-count'), list: $('#list'), empty: $('#empty'),
+  sortNote: $('#sort-note'), sort: $('#sort'), sheet: $('#sheet'), sheetBody: $('#sheet-body'),
+  nameDialog: $('#name-dialog'), nameForm: $('#name-form'), nameInput: $('#name-input'), nameError: $('#name-error'),
+  toast: $('#toast'),
+};
+
+const getSpecial = (id) => data.specials.find((s) => s.id === id);
+const ratingsFor = (id) => data.ratings.filter((r) => r.specialId === id);
+const myRating = (id) => data.ratings.find((r) => r.specialId === id && r.uid === me.uid);
+
+/* ============================================================
+   Rendering: list
+   ============================================================ */
+function scoreHtml(id) {
+  const st = stats.get(id);
+  if (!st) return '<span class="score-none">Not rated yet</span>';
+  if (st.count < CONFIG.minRatingsForScore) return `<span class="score-none">${st.count} rating${st.count === 1 ? '' : 's'} so far</span>`;
+  return `<span class="score">${icon('star', 'star-fill')}<strong><span class="vh">Rated </span>${st.avg.toFixed(1)}<span class="vh"> out of 5</span></strong><span class="score-count">${st.count} ratings</span></span>`;
+}
+
+function rowHtml(s) {
+  const walk = walkMinutes(s);
+  const when = whenText(s);
+  const tags = [
+    !runsToday(s) ? '<span class="tag tag-muted">Not running today</span>' : '',
+    isOutdated(s) ? '<span class="tag tag-warn">May be outdated</span>' : '',
+  ].join('');
+  return `<li class="row"><button type="button" class="row-btn" data-action="open" data-id="${esc(s.id)}">
+    <span class="row-place">${esc(s.restaurant)}</span>
+    <span class="row-main"><span class="row-title">${esc(s.title)}</span><span class="leader" aria-hidden="true"></span><span class="row-price">${esc(formatPrice(s.price))}</span></span>
+    <span class="row-meta">${when ? `<span class="meta-item">${icon('clock')}${esc(when)}</span>` : ''}${walk ? `<span class="meta-item">${icon('pin')}${walk} min walk</span>` : ''}</span>
+    ${s.finePrint ? `<span class="row-fine">${esc(s.finePrint)}</span>` : ''}
+    <span class="row-foot">${scoreHtml(s.id)}${tags}</span>
+  </button></li>`;
+}
+
+function renderList() {
+  els.date.textContent = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
+  document.querySelectorAll('[data-action="filter"]').forEach((b) => b.setAttribute('aria-pressed', String(ui[b.dataset.filter])));
+  document.querySelectorAll('[data-action="view"]').forEach((b) => b.setAttribute('aria-pressed', String(ui.view === b.dataset.view)));
+  document.body.dataset.view = ui.view;
+  els.sort.value = ui.sort;
+  els.sortNote.hidden = ui.sort !== 'top' || !loaded || !data.specials.length;
+  els.sortNote.textContent = 'Ranked by TST staff ratings.';
+
+  if (!loaded) {
+    els.count.textContent = loadError ? '' : 'Loading specials…';
+    els.list.innerHTML = '';
+    els.empty.hidden = !loadError;
+    if (loadError) {
+      els.empty.innerHTML = `<h3>Couldn’t load the specials</h3><p>${esc(loadError)}</p>
+        <div class="empty-actions"><button type="button" class="btn" data-action="reload">Reload the page</button></div>`;
+    }
+    return;
+  }
+
+  const todayCount = data.specials.filter(runsToday).length;
+  const total = data.specials.length;
+  els.count.textContent = total ? `${todayCount} of ${total} special${total === 1 ? '' : 's'} running today` : 'No specials listed yet';
+
+  const focusedId = document.activeElement?.closest?.('#list [data-id]')?.dataset.id;
+  const list = visibleSpecials(data.specials, stats, ui);
+  els.list.innerHTML = list.map(rowHtml).join('');
+  if (focusedId) els.list.querySelector(`[data-id="${CSS.escape(focusedId)}"]`)?.focus();
+
+  if (list.length) { els.empty.hidden = true; return; }
+  els.empty.hidden = false;
+  if (!total) {
+    els.empty.innerHTML = `<h3>No specials yet</h3><p>Know a good lunch deal nearby? Add the first one.</p>
+      <div class="empty-actions"><button type="button" class="btn btn-primary" data-action="add">Add a special</button></div>`;
+  } else {
+    els.empty.innerHTML = `<h3>Nothing matches these filters</h3><p>${ui.today ? 'Nothing listed is running today with these filters.' : 'No specials fit these filters.'}</p>
+      <div class="empty-actions">
+        ${ui.today ? '<button type="button" class="btn" data-action="filter" data-filter="today">Show all days</button>' : ''}
+        ${ui.budget ? '<button type="button" class="btn" data-action="filter" data-filter="budget">Show any price</button>' : ''}
+      </div>`;
+  }
+}
+
+/* ============================================================
+   Rendering: sheets
+   ============================================================ */
+const closeBtn = `<button type="button" class="icon-btn" data-action="close-sheet" aria-label="Close">${icon('close')}</button>`;
+
+function starsRow(n) {
+  return `<span class="stars-row" aria-label="${n} out of 5 stars">${[1, 2, 3, 4, 5].map((i) => icon('star', i <= n ? 'on' : '')).join('')}</span>`;
+}
+
+function detailInfoHtml(s) {
+  const walk = walkMinutes(s);
+  const when = whenText(s);
+  const by = s.confirmedByName ? ` by ${esc(s.confirmedByName)}` : '';
+  const status = isOutdated(s)
+    ? `<p class="d-status is-warn">May be outdated. Last confirmed ${relTime(lastConfirmed(s))}${by}. Had it recently? Tap Still accurate or Edit.</p>`
+    : `<p class="d-status">Confirmed ${relTime(lastConfirmed(s))}${by}.</p>`;
+  const where = s.address
+    ? `<div><dt>Where</dt><dd>${esc(s.address)}${walk ? `<br><span class="muted">${walk} min walk from ${esc(CONFIG.office.label)}</span>` : ''}</dd></div>`
+    : walk ? `<div><dt>Where</dt><dd>${walk} min walk from ${esc(CONFIG.office.label)}</dd></div>` : '';
+  return `
+    <p class="d-place">${esc(s.restaurant)}</p>
+    <h2 class="d-title" id="sheet-title">${esc(s.title)}</h2>
+    <p class="d-price">${esc(formatPrice(s.price))}</p>
+    ${s.photoUrl ? `<img class="d-photo" src="${esc(s.photoUrl)}" alt="${esc(s.title)} at ${esc(s.restaurant)}" loading="lazy" referrerpolicy="no-referrer">` : ''}
+    <dl class="d-facts">
+      ${when ? `<div><dt>When</dt><dd>${esc(when)}</dd></div>` : ''}
+      ${where}
+      ${s.finePrint ? `<div><dt>Fine print</dt><dd>${esc(s.finePrint)}</dd></div>` : ''}
+    </dl>
+    <div class="d-actions">
+      <a class="btn btn-primary" href="${esc(mapsUrl(s))}" target="_blank" rel="noopener noreferrer">${icon('pin')}Open in Google Maps</a>
+      <button type="button" class="btn" data-action="confirm" data-id="${esc(s.id)}">${icon('check')}Still accurate</button>
+      <button type="button" class="btn" data-action="edit" data-id="${esc(s.id)}">${icon('edit')}Edit</button>
+    </div>
+    ${status}`;
+}
+
+function rateFormHtml(s) {
+  const mine = myRating(s.id);
+  return `
+    <form class="rate-form" id="rate-form" data-id="${esc(s.id)}" novalidate>
+      <h3>Your rating</h3>
+      <fieldset class="star-input" data-value="${mine?.stars ?? 0}">
+        <legend class="vh">Stars</legend>
+        ${[1, 2, 3, 4, 5].map((n) => `<input type="radio" name="stars" id="star-${n}" value="${n}" ${mine?.stars === n ? 'checked' : ''}><label for="star-${n}">${icon('star')}<span class="vh">${n} star${n === 1 ? '' : 's'}</span></label>`).join('')}
+      </fieldset>
+      <label class="field-label" for="review">Review <span class="muted">(optional)</span></label>
+      <textarea id="review" name="review" rows="2" maxlength="280" placeholder="What should people know?">${esc(mine?.review ?? '')}</textarea>
+      <p class="form-error" id="rate-error" hidden></p>
+      <div class="form-row">
+        <button class="btn btn-primary" type="submit">${mine ? 'Update rating' : 'Save rating'}</button>
+        <span class="saved-note" id="rate-saved" aria-live="polite"></span>
+      </div>
+    </form>`;
+}
+
+function reviewsHtml(s) {
+  const st = stats.get(s.id);
+  const min = CONFIG.minRatingsForScore;
+  const head = st && st.count >= min
+    ? `<p class="d-score">${icon('star', 'star-fill')}<strong><span class="vh">Rated </span>${st.avg.toFixed(1)}<span class="vh"> out of 5</span></strong><span class="muted">from ${st.count} TST staff ratings</span></p>`
+    : `<p class="muted">A score shows once ${min} people have rated this. ${st ? `${st.count} so far.` : 'No ratings yet.'}</p>`;
+  const written = ratingsFor(s.id)
+    .filter((r) => r.review || me.isAdmin)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((r) => `<li class="review"><p class="review-head"><strong>${esc(r.name)}</strong>${starsRow(r.stars)}<span class="muted">${relTime(r.updatedAt)}</span>${me.isAdmin ? `<button type="button" class="link-btn danger-link" data-action="delete-rating" data-rid="${esc(r.id)}">Delete</button>` : ''}</p>${r.review ? `<p>${esc(r.review)}</p>` : ''}</li>`)
+    .join('');
+  return `<h3>Staff rating</h3>${head}${written ? `<ul class="reviews">${written}</ul>` : ''}`;
+}
+
+function creditsHtml(s) {
+  const added = `Added by ${esc(s.createdByName || 'someone')} ${relTime(s.createdAt)}.`;
+  const edited = s.editedAt ? `<br>Last edited by ${esc(s.editedByName || 'someone')} ${relTime(s.editedAt)}.` : '';
+  return `<p class="credits">${added}${edited}</p>`;
+}
+
+function adminHtml(s) {
+  return `
+    <h3>Admin</h3>
+    <div id="d-delete">${deleteAskHtml(s)}</div>
+    <h4 class="admin-sub">Edit history</h4>
+    <div id="d-history"><p class="muted">Loading edit history…</p></div>`;
+}
+const deleteAskHtml = (s) => `<button type="button" class="btn btn-danger" data-action="delete-ask" data-id="${esc(s.id)}">Delete this special</button>`;
+
+async function loadHistory(id) {
+  const box = $('#d-history');
+  if (!box) return;
+  try {
+    const versions = await store.getHistory(id);
+    if (ui.sheet?.kind !== 'detail' || ui.sheet.id !== id || !$('#d-history')) return;
+    $('#d-history').innerHTML = versions.length
+      ? `<ul class="history">${versions.map((v) => `
+          <li>
+            <p><strong>${esc(v.title)}</strong>, ${esc(formatPrice(v.price))}. ${esc(whenText(v))}</p>
+            <p class="muted">Version by ${esc(v.versionByName || 'someone')} ${relTime(v.versionAt)}. Replaced by ${esc(v.savedByName || 'someone')} ${relTime(v.savedAt)}.</p>
+            <button type="button" class="link-btn" data-action="restore" data-id="${esc(id)}" data-rev="${esc(v.rev)}">Restore this version</button>
+          </li>`).join('')}</ul>`
+      : '<p class="muted">No edits yet.</p>';
+  } catch (err) {
+    if ($('#d-history')) $('#d-history').innerHTML = `<p class="form-error">${esc(friendlyError(err))}</p>`;
+  }
+}
+
+function openDetail(id) {
+  const s = getSpecial(id);
+  if (!s) return;
+  ui.sheet = { kind: 'detail', id };
+  els.sheetBody.innerHTML = `
+    <div class="sheet-head bare">${closeBtn}</div>
+    <div id="d-info">${detailInfoHtml(s)}</div>
+    <div class="d-section" id="d-rate">${rateFormHtml(s)}</div>
+    <div class="d-section" id="d-reviews">${reviewsHtml(s)}</div>
+    <div id="d-credits">${creditsHtml(s)}</div>
+    ${me.isAdmin ? `<div class="d-section admin" id="d-admin">${adminHtml(s)}</div>` : ''}`;
+  showSheet();
+  els.sheet.scrollTop = 0;
+  if (me.isAdmin) loadHistory(id);
+}
+
+// Called when data changes while the detail is open.
+// Only refreshes the parts without inputs, so nobody loses what they're typing.
+function refreshDetail() {
+  const s = getSpecial(ui.sheet.id);
+  if (!s) { closeSheet(); toast('That special was removed.'); return; }
+  $('#d-info').innerHTML = detailInfoHtml(s);
+  $('#d-reviews').innerHTML = reviewsHtml(s);
+  $('#d-credits').innerHTML = creditsHtml(s);
+}
+
+function formHtml(s) {
+  const isEdit = !!s;
+  const v = s ?? { restaurant: '', address: '', title: '', price: '', days: [1, 2, 3, 4, 5], start: '', end: '', finePrint: '', photoUrl: '' };
+  const err = (f) => `<p class="field-error" data-error-for="${f}" id="err-${f}" hidden></p>`;
+  return `
+    <div class="sheet-head"><h2 id="sheet-title">${isEdit ? 'Edit special' : 'Add a special'}</h2>${closeBtn}</div>
+    <form id="special-form" data-id="${isEdit ? esc(s.id) : ''}" novalidate>
+      <div class="field">
+        <label for="f-restaurant">Restaurant</label>
+        <input id="f-restaurant" name="restaurant" maxlength="60" autocomplete="off" value="${esc(v.restaurant)}" aria-describedby="err-restaurant">
+        ${err('restaurant')}
+      </div>
+      <div class="field">
+        <label for="f-address">Address <span class="muted">(optional)</span></label>
+        <input id="f-address" name="address" maxlength="120" autocomplete="off" placeholder="e.g. 1520 3rd Ave" value="${esc(v.address)}" aria-describedby="err-address">
+        ${err('address')}
+      </div>
+      <div class="field">
+        <label for="f-title">The special</label>
+        <input id="f-title" name="title" maxlength="80" autocomplete="off" placeholder="e.g. Burrito + beer" value="${esc(v.title)}" aria-describedby="err-title">
+        ${err('title')}
+      </div>
+      <div class="field">
+        <label for="f-price">Price</label>
+        <div class="price-input"><span aria-hidden="true">$</span><input id="f-price" name="price" inputmode="decimal" maxlength="7" autocomplete="off" placeholder="15" value="${v.price === '' ? '' : esc(String(v.price))}" aria-describedby="err-price"></div>
+        ${err('price')}
+      </div>
+      <fieldset class="field" aria-describedby="err-days">
+        <legend>Days</legend>
+        <div class="day-toggles">
+          ${WEEK_ORDER.map((d) => `<label class="day"><input type="checkbox" name="days" value="${d}" ${v.days.includes(d) ? 'checked' : ''}><span>${DAY_SHORT[d]}</span></label>`).join('')}
+        </div>
+        <div class="day-quick">
+          <button type="button" class="link-btn" data-action="days-set" data-days="1,2,3,4,5">Weekdays</button>
+          <button type="button" class="link-btn" data-action="days-set" data-days="0,1,2,3,4,5,6">Every day</button>
+        </div>
+        ${err('days')}
+      </fieldset>
+      <fieldset class="field" aria-describedby="err-hours">
+        <legend>Hours <span class="muted">(optional)</span></legend>
+        <div class="hours-row">
+          <label class="vh" for="f-start">Starts</label><input type="time" id="f-start" name="start" value="${esc(v.start || '')}">
+          <span>to</span>
+          <label class="vh" for="f-end">Ends</label><input type="time" id="f-end" name="end" value="${esc(v.end || '')}">
+        </div>
+        ${err('hours')}
+      </fieldset>
+      <div class="field">
+        <label for="f-fine">Fine print <span class="muted">(optional)</span></label>
+        <textarea id="f-fine" name="finePrint" rows="2" maxlength="200" placeholder="e.g. Swap the beer for a soft drink." aria-describedby="err-finePrint">${esc(v.finePrint)}</textarea>
+        ${err('finePrint')}
+      </div>
+      <div class="field">
+        <label for="f-photo">Photo link <span class="muted">(optional)</span></label>
+        <input id="f-photo" name="photoUrl" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://" value="${esc(v.photoUrl)}" aria-describedby="hint-photo err-photoUrl">
+        <p class="hint" id="hint-photo">Paste a link to a photo that’s already online.</p>
+        ${err('photoUrl')}
+      </div>
+      <p class="form-error" id="form-error" hidden></p>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">${isEdit ? 'Save changes' : 'Add special'}</button>
+        <button type="button" class="btn btn-ghost" data-action="${isEdit ? 'back-to-detail' : 'close-sheet'}" data-id="${isEdit ? esc(s.id) : ''}">Cancel</button>
+      </div>
+    </form>`;
+}
+
+function openForm(id) {
+  const s = id ? getSpecial(id) : null;
+  if (id && !s) return;
+  ui.sheet = { kind: 'form', id: id || null };
+  els.sheetBody.innerHTML = formHtml(s);
+  showSheet();
+  els.sheet.scrollTop = 0;
+  $('#f-restaurant').focus();
+}
+
+function aboutHtml() {
+  return `
+    <div class="sheet-head"><h2 id="sheet-title">How this works</h2>${closeBtn}</div>
+    <div class="about">
+      <p>Anyone at TST can add a special or fix one that’s out of date. Each special shows who added it and who last edited it.</p>
+      <p>Ratings are from TST staff. A special gets a score once ${CONFIG.minRatingsForScore} people rate it.</p>
+      <p>Had a special and it’s still the same? Tap Still accurate. Specials nobody has confirmed in 2 months are marked May be outdated.</p>
+      <p class="you" id="about-you">${me.name ? `You’re listed as <strong>${esc(me.name)}</strong>.` : 'You haven’t added your name yet.'}
+        <button type="button" class="link-btn" data-action="change-name">${me.name ? 'Change name' : 'Add your name'}</button></p>
+      <p class="admin-line">${me.isAdmin
+        ? `Signed in as admin${me.email ? ` (${esc(me.email)})` : ''}. <button type="button" class="link-btn" data-action="admin-signout">Sign out</button>`
+        : '<button type="button" class="link-btn muted" data-action="admin-signin">Admin sign in</button>'}</p>
+    </div>`;
+}
+
+function openAbout() {
+  ui.sheet = { kind: 'about' };
+  els.sheetBody.innerHTML = aboutHtml();
+  showSheet();
+}
+
+let returnFocusTo = null;
+function showSheet() {
+  if (!els.sheet.open) {
+    returnFocusTo = document.activeElement?.closest?.('[data-id]')?.dataset.id ?? document.activeElement;
+    els.sheet.showModal();
+  }
+}
+function closeSheet() { if (els.sheet.open) els.sheet.close(); }
+
+els.sheet.addEventListener('close', () => {
+  ui.sheet = null;
+  els.sheetBody.innerHTML = '';
+  const target = typeof returnFocusTo === 'string'
+    ? document.querySelector(`#list [data-id="${CSS.escape(returnFocusTo)}"]`)
+    : returnFocusTo;
+  if (target && document.contains(target)) target.focus();
+  returnFocusTo = null;
+});
+// Tap outside the sheet to close it.
+els.sheet.addEventListener('click', (e) => { if (e.target === els.sheet) closeSheet(); });
+
+/* ============================================================
+   Name prompt
+   ============================================================ */
+let nameResolve = null;
+
+function askName() {
+  return new Promise((resolve) => {
+    nameResolve = resolve;
+    els.nameInput.value = me.name;
+    els.nameError.hidden = true;
+    els.nameInput.removeAttribute('aria-invalid');
+    els.nameDialog.showModal();
+    els.nameInput.focus();
+  });
+}
+
+async function ensureName() {
+  return me.name || (await askName());
+}
+
+els.nameForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = clean(els.nameInput.value);
+  if (!name || name.length > 30) {
+    els.nameError.textContent = name ? 'Keep it under 30 characters.' : 'Add your first name.';
+    els.nameError.hidden = false;
+    els.nameInput.setAttribute('aria-invalid', 'true');
+    els.nameInput.focus();
+    return;
+  }
+  me.name = name;
+  storage.set('tst-lunch-name', name);
+  const resolve = nameResolve; nameResolve = null;
+  els.nameDialog.close();
+  resolve?.(name);
+  if (ui.sheet?.kind === 'about') els.sheetBody.innerHTML = aboutHtml();
+});
+els.nameDialog.addEventListener('close', () => { const r = nameResolve; nameResolve = null; r?.(null); });
+els.nameDialog.addEventListener('click', (e) => { if (e.target === els.nameDialog) els.nameDialog.close(); });
+
+/* ============================================================
+   Toast
+   ============================================================ */
+let toastTimer = null;
+function toast(message) {
+  const t = els.toast;
+  clearTimeout(toastTimer);
+  const popover = typeof t.showPopover === 'function';
+  if (popover) { try { if (t.matches(':popover-open')) t.hidePopover(); t.showPopover(); } catch { /* ignore */ } }
+  else t.classList.add('is-shown');
+  t.textContent = message;
+  toastTimer = setTimeout(() => {
+    if (popover) { try { t.hidePopover(); } catch { /* ignore */ } }
+    else t.classList.remove('is-shown');
+  }, 2800);
+}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+async function confirmSpecial(id) {
+  const name = await ensureName();
+  if (!name) return;
+  try {
+    await store.confirmSpecial(id, name);
+    toast('Marked as still accurate.');
+  } catch (err) { toast(friendlyError(err)); }
+}
+
+function readSpecialForm(form) {
+  const fd = new FormData(form);
+  return {
+    restaurant: fd.get('restaurant'), address: fd.get('address'), title: fd.get('title'), price: fd.get('price'),
+    days: fd.getAll('days'), start: fd.get('start'), end: fd.get('end'), finePrint: fd.get('finePrint'), photoUrl: fd.get('photoUrl'),
+  };
+}
+
+function showFieldErrors(form, errors) {
+  form.querySelectorAll('[data-error-for]').forEach((p) => {
+    const msg = errors[p.dataset.errorFor];
+    p.hidden = !msg; p.textContent = msg || '';
+  });
+  const fieldFor = { restaurant: 'restaurant', address: 'address', title: 'title', price: 'price', finePrint: 'finePrint', photoUrl: 'photoUrl', start: 'hours', end: 'hours' };
+  form.querySelectorAll('input[name], textarea[name]').forEach((input) => {
+    const key = fieldFor[input.name];
+    if (key && errors[key]) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+  });
+  const order = ['restaurant', 'address', 'title', 'price', 'days', 'hours', 'finePrint', 'photoUrl'];
+  const first = order.find((k) => errors[k]);
+  if (first) {
+    const target = first === 'days' ? form.querySelector('input[name="days"]') : first === 'hours' ? form.querySelector('#f-start') : form.querySelector(`[name="${first}"]`);
+    target?.focus();
+  }
+}
+
+async function submitSpecialForm(form) {
+  const id = form.dataset.id || null;
+  const { errors, data: fields } = validateSpecial(readSpecialForm(form));
+  showFieldErrors(form, errors);
+  if (Object.keys(errors).length) return;
+  const name = await ensureName();
+  if (!name) return;
+  const button = form.querySelector('[type="submit"]');
+  const box = form.querySelector('#form-error');
+  box.hidden = true;
+  button.disabled = true;
+  try {
+    if (id) {
+      await store.updateSpecial(id, fields, name);
+      openDetail(id);
+      toast('Changes saved.');
+    } else {
+      const newId = await store.addSpecial(fields, name);
+      closeSheet();
+      const s = getSpecial(newId);
+      const hidden = s && !visibleSpecials([s], stats, ui).length;
+      toast(hidden ? 'Special added. Change the filters to see it.' : 'Special added.');
+    }
+  } catch (err) {
+    box.textContent = friendlyError(err);
+    box.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function submitRating(form) {
+  const id = form.dataset.id;
+  const fd = new FormData(form);
+  const stars = Number(fd.get('stars'));
+  const review = clean(fd.get('review'));
+  const error = form.querySelector('#rate-error');
+  if (!stars) { error.textContent = 'Pick a star rating.'; error.hidden = false; return; }
+  if (review.length > 280) { error.textContent = 'Keep the review under 280 characters.'; error.hidden = false; return; }
+  error.hidden = true;
+  const name = await ensureName();
+  if (!name) return;
+  const button = form.querySelector('[type="submit"]');
+  button.disabled = true;
+  try {
+    await store.saveRating(id, { stars, review }, name);
+    button.textContent = 'Update rating';
+    form.querySelector('#rate-saved').textContent = 'Rating saved.';
+  } catch (err) {
+    error.textContent = friendlyError(err);
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function deleteSpecial(id) {
+  try {
+    await store.deleteSpecial(id);
+    closeSheet();
+    toast('Special deleted.');
+  } catch (err) {
+    const box = $('#d-delete');
+    if (box) box.insertAdjacentHTML('beforeend', `<p class="form-error">${esc(adminError(err))}</p>`);
+  }
+}
+
+const adminError = (err) => (String(err?.code).includes('permission-denied') ? 'Only the site admin can delete things.' : friendlyError(err));
+
+async function restoreVersion(id, rev, button) {
+  const name = await ensureName();
+  if (!name) return;
+  button.disabled = true;
+  try {
+    await store.restoreVersion(id, rev, name);
+    toast('Version restored.');
+    loadHistory(id);
+  } catch (err) {
+    toast(friendlyError(err));
+    button.disabled = false;
+  }
+}
+
+async function deleteRating(ratingId) {
+  try {
+    await store.deleteRating(ratingId);
+    toast('Rating deleted.');
+  } catch (err) { toast(adminError(err)); }
+}
+
+async function adminSignIn() {
+  try {
+    await store.signInAdmin();
+  } catch (err) {
+    const msg = friendlyError(err);
+    if (!/closed|cancel/i.test(String(err?.code))) toast(msg);
+  }
+}
+
+/* ============================================================
+   Event wiring (one listener per event type, no inline handlers)
+   ============================================================ */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const { action, id } = el.dataset;
+  if (!store && !['view', 'filter', 'reload'].includes(action)) return; // still connecting
+  switch (action) {
+    case 'open': openDetail(id); break;
+    case 'add': openForm(null); break;
+    case 'edit': openForm(id); break;
+    case 'back-to-detail': openDetail(id); break;
+    case 'confirm': confirmSpecial(id); break;
+    case 'about': openAbout(); break;
+    case 'close-sheet': closeSheet(); break;
+    case 'change-name': askName(); break;
+    case 'name-cancel': els.nameDialog.close(); break;
+    case 'view': ui.view = el.dataset.view; renderList(); break;
+    case 'filter': ui[el.dataset.filter] = !ui[el.dataset.filter]; renderList(); break;
+    case 'reload': location.reload(); break;
+    case 'days-set': {
+      const want = new Set(el.dataset.days.split(',').map(Number));
+      el.closest('fieldset').querySelectorAll('input[name="days"]').forEach((c) => { c.checked = want.has(Number(c.value)); });
+      break;
+    }
+    case 'delete-ask': {
+      const s = getSpecial(id);
+      if (!s) break;
+      $('#d-delete').innerHTML = `<p class="danger-note">Delete “${esc(s.title)}” for good? This also removes it from everyone’s list.</p>
+        <div class="form-row">
+          <button type="button" class="btn btn-danger-solid" data-action="delete-confirm" data-id="${esc(id)}">Delete for good</button>
+          <button type="button" class="btn btn-ghost" data-action="delete-cancel" data-id="${esc(id)}">Cancel</button>
+        </div>`;
+      break;
+    }
+    case 'delete-cancel': { const s = getSpecial(id); if (s) $('#d-delete').innerHTML = deleteAskHtml(s); break; }
+    case 'delete-confirm': el.disabled = true; deleteSpecial(id); break;
+    case 'restore': restoreVersion(id, el.dataset.rev, el); break;
+    case 'delete-rating': el.disabled = true; deleteRating(el.dataset.rid); break;
+    case 'admin-signin': adminSignIn(); break;
+    case 'admin-signout': store.signOutAdmin().catch((err) => toast(friendlyError(err))); break;
+  }
+});
+
+document.addEventListener('submit', (e) => {
+  if (e.target.id === 'special-form') { e.preventDefault(); submitSpecialForm(e.target); }
+  else if (e.target.id === 'rate-form') { e.preventDefault(); submitRating(e.target); }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target === els.sort) { ui.sort = els.sort.value; renderList(); }
+  if (e.target.name === 'stars') {
+    e.target.closest('fieldset').dataset.value = e.target.value;
+    const saved = $('#rate-saved'); if (saved) saved.textContent = '';
+  }
+});
+
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'review') { const saved = $('#rate-saved'); if (saved) saved.textContent = ''; }
+});
+
+// Hide a photo whose link doesn't load.
+document.addEventListener('error', (e) => {
+  if (e.target instanceof HTMLImageElement && e.target.classList.contains('d-photo')) e.target.remove();
+}, true);
+
+/* ============================================================
+   Start
+   ============================================================ */
+function onData(next) {
+  data = next;
+  loaded = true;
+  loadError = null;
+  stats = ratingStats(data.ratings, data.specials);
+  renderList();
+  if (ui.sheet?.kind === 'detail') refreshDetail();
+}
+
+function onLoadError(err) {
+  console.error(err);
+  if (loaded) { toast('Lost connection to the server. Reload if things look stale.'); return; }
+  loadError = friendlyError(err);
+  renderList();
+}
+
+async function start() {
+  renderList();
+  if (SAMPLE_MODE) $('#preview-bar').hidden = false;
+  const slow = setTimeout(() => {
+    if (!loaded && !loadError) els.count.textContent = 'Still loading. Check your connection, or reload the page.';
+  }, 10000);
+  try {
+    store = SAMPLE_MODE ? createSampleStore() : await createFirebaseStore();
+  } catch (err) {
+    clearTimeout(slow);
+    console.error(err);
+    loadError = 'The site couldn’t connect. Check your connection and reload the page.';
+    renderList();
+    return;
+  }
+  store.onUser((info) => {
+    const adminChanged = info.isAdmin !== me.isAdmin;
+    Object.assign(me, info);
+    if (ui.sheet?.kind === 'about') els.sheetBody.innerHTML = aboutHtml();
+    if (adminChanged && ui.sheet?.kind === 'detail') openDetail(ui.sheet.id);
+  });
+  store.subscribe((next) => { clearTimeout(slow); onData(next); }, (err) => { clearTimeout(slow); onLoadError(err); });
+}
+start();
+</script>
+</body>
+</html>
