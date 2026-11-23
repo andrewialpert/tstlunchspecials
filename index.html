@@ -317,7 +317,11 @@ dialog.small p { margin: 0 0 14px; color: var(--muted); }
   background: rgba(var(--shadow), 0.85); color: #fff;
   font-size: 13px; font-weight: 700; padding: 4px 9px; border-radius: 6px;
 }
-.d-photo-hint .ic { width: 14px; height: 14px; }
+.d-photo-hint .on-mouse { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .d-photo-hint .on-touch { display: none; }
+  .d-photo-hint .on-mouse { display: inline; }
+}
 dialog.viewer {
   width: 100vw; height: 100dvh; max-width: none; max-height: none;
   margin: 0; padding: calc(56px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom));
@@ -1207,7 +1211,7 @@ function detailInfoHtml(s) {
     <p class="d-price">${esc(formatPrice(s.price))}</p>
     ${s.photoUrl ? `<button type="button" class="d-photo-btn" data-action="photo-view" data-src="${esc(s.photoUrl)}" data-alt="${esc(s.title)} at ${esc(s.restaurant)}" aria-label="See the photo full size">
       <img class="d-photo" src="${esc(s.photoUrl)}" alt="${esc(s.title)} at ${esc(s.restaurant)}" loading="lazy" referrerpolicy="no-referrer">
-      <span class="d-photo-hint" aria-hidden="true">${icon('expand')}Full size</span>
+      <span class="d-photo-hint" aria-hidden="true"><span class="on-touch">Tap to enlarge</span><span class="on-mouse">Click to enlarge</span></span>
     </button>` : ''}
     <dl class="d-facts">
       ${when ? `<div><dt>When</dt><dd>${esc(when)}</dd></div>` : ''}
