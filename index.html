@@ -215,6 +215,46 @@ body[data-view="map"] .map-col { display: block; padding: 0 20px calc(96px + env
   box-shadow: 0 4px 16px rgba(27, 42, 74, 0.12);
 }
 .map-note strong { display: block; font-size: 17px; }
+.map-canvas { position: absolute; inset: 0; }
+.map.is-live .map-grid, .map.is-live .map-note { display: none; }
+.map-unmapped { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.pin-price {
+  position: relative;
+  background: var(--tomato); color: #fff;
+  font-family: var(--font); font-weight: 800; font-stretch: 75%; font-size: 17px; line-height: 1;
+  padding: 5px 8px; border-radius: 6px; border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(27, 42, 74, 0.35);
+  cursor: pointer;
+}
+.pin-price::after {
+  content: ""; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: #fff; border-bottom: 0;
+}
+.pin-office {
+  background: var(--ink); color: #fff;
+  font-family: var(--font); font-weight: 900; font-stretch: 115%; font-size: 13px; line-height: 1;
+  padding: 7px 9px; border-radius: 999px; border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(27, 42, 74, 0.35);
+}
+
+/* Restaurant search */
+.combo { position: relative; }
+.place-list {
+  position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px);
+  list-style: none; margin: 0; padding: 4px;
+  background: #fff; border: 1.5px solid var(--ink); border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(27, 42, 74, 0.18);
+}
+.place-list li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.place-list li[aria-selected="true"], .place-list li:hover { background: var(--wash); }
+.place-list .pl-main { display: block; font-weight: 700; }
+.place-list .pl-sub { display: block; font-size: 14px; color: var(--muted); }
+.place-picked { color: var(--ink); }
+
+/* Photo */
+.photo-box { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.photo-thumb { width: 88px; height: 88px; object-fit: cover; border-radius: 8px; background: var(--wash); }
+.photo-actions { display: flex; gap: 16px; }
 .map-note p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
 
 /* Sheets */
@@ -462,11 +502,13 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
   <section class="map-col" aria-label="Map">
     <div class="map" id="map">
       <div class="map-grid" aria-hidden="true"></div>
-      <div class="map-note">
-        <strong>The map comes in the Google step</strong>
-        <p>Once Google Maps is connected, every special shows up here as a pin around TST.</p>
+      <div class="map-canvas" id="map-canvas"></div>
+      <div class="map-note" id="map-note">
+        <strong>The map isn’t connected yet</strong>
+        <p>Once Google Maps is set up, every special shows up here as a pin around TST.</p>
       </div>
     </div>
+    <p class="map-unmapped" id="map-unmapped" hidden></p>
   </section>
 </main>
 
@@ -506,9 +548,13 @@ const FIREBASE_CONFIG = {
   appId: '1:775162854438:web:1d0db9f3db8885488f3ae7',
 };
 
+// Google Maps: the key and map ID from Google Cloud. Leave blank and the map stays off.
+const GOOGLE_MAPS_KEY = 'AIzaSyAqQB9byNDFxaLOkaAWMhLAwPpalmxXb64'; // locked to tstlunchspecials.org in Google Cloud
+const GOOGLE_MAP_ID = 'b8a2785bcc26c0a44742dee8';
+
 const CONFIG = {
-  // The office. Replaced with the exact spot in the Google Maps step.
-  office: { lat: 40.7739, lng: -73.9541, label: 'TST' },
+  // The office (for the TST pin and walking times).
+  office: { lat: 40.7735, lng: -73.9555, label: 'TST' },
   outdatedAfterDays: 60,   // "May be outdated" after this long without a confirmation
   minRatingsForScore: 3,   // a special shows a score once this many people rate it
 };
@@ -551,6 +597,7 @@ function friendlyError(err) {
   if (code.includes('popup-blocked')) return 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.';
   if (code.includes('operation-not-allowed') || code.includes('admin-restricted-operation')) return 'Sign-in isn’t turned on in Firebase yet.';
   if (code.includes('unauthorized-domain')) return 'This web address isn’t on Firebase’s list of allowed domains yet.';
+  if (code.startsWith('storage/')) return 'Couldn’t upload the photo. Try again in a moment.';
   return err?.message || 'Something went wrong. Try again.';
 }
 
@@ -604,11 +651,16 @@ function relTime(ts) {
 
 function walkMinutes(s) {
   if (typeof s.lat !== 'number' || typeof s.lng !== 'number') return null;
-  const R = 6371000, rad = (x) => (x * Math.PI) / 180;
-  const dLat = rad(s.lat - CONFIG.office.lat), dLng = rad(s.lng - CONFIG.office.lng);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(CONFIG.office.lat)) * Math.cos(rad(s.lat)) * Math.sin(dLng / 2) ** 2;
-  const meters = 2 * R * Math.asin(Math.sqrt(a));
-  return Math.max(1, Math.round((meters * 1.25) / 80)); // street grid detour, ~80 m per minute
+  // Walk along Manhattan's street grid (turned about 29° from true north),
+  // not in a straight line: blocks up the avenue + blocks across the streets.
+  const R = 6371000, rad = Math.PI / 180;
+  const north = (s.lat - CONFIG.office.lat) * rad * R;
+  const east = (s.lng - CONFIG.office.lng) * rad * R * Math.cos(CONFIG.office.lat * rad);
+  const turn = 29 * rad;
+  const alongAvenue = north * Math.cos(turn) + east * Math.sin(turn);
+  const alongStreet = east * Math.cos(turn) - north * Math.sin(turn);
+  const meters = Math.abs(alongAvenue) + Math.abs(alongStreet);
+  return Math.max(1, Math.round(meters / 80)); // about 80 m a minute, so 20 blocks is about 20 minutes
 }
 
 function mapsUrl(s) {
@@ -701,8 +753,15 @@ function validateSpecial(raw) {
   if (data.finePrint.length > 200) errors.finePrint = 'Keep the fine print under 200 characters.';
 
   data.photoUrl = String(raw.photoUrl ?? '').trim();
-  if (data.photoUrl && !/^https:\/\/\S+$/i.test(data.photoUrl)) errors.photoUrl = 'Use a link that starts with https://';
-  else if (data.photoUrl.length > 500) errors.photoUrl = 'That link is too long.';
+  if (data.photoUrl && !/^(https:\/\/|blob:)\S+$/i.test(data.photoUrl)) errors.photoUrl = 'That photo didn’t upload properly. Try adding it again.';
+  else if (data.photoUrl.length > 500) errors.photoUrl = 'That photo link is too long.';
+
+  // Filled in when someone picks the restaurant from Google's list.
+  data.placeId = String(raw.placeId ?? '').slice(0, 300);
+  const lat = raw.lat === '' || raw.lat == null ? NaN : Number(raw.lat);
+  const lng = raw.lng === '' || raw.lng == null ? NaN : Number(raw.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) { data.lat = lat; data.lng = lng; }
+  else { data.lat = null; data.lng = null; data.placeId = ''; }
 
   return { errors, data };
 }
@@ -863,6 +922,16 @@ async function createFirebaseStore() {
 
     async signInAdmin() { await A.signInWithPopup(auth, new A.GoogleAuthProvider()); },
     async signOutAdmin() { await A.signOut(auth); },
+
+    // Photos are shrunk in the browser first, then stored in Firebase Storage.
+    async uploadPhoto(blob) {
+      const user = await requireUser();
+      const S = await import(`${base}/firebase-storage.js`);
+      const storage = S.getStorage(app);
+      const r = S.ref(storage, `photos/${user.uid}/${Date.now()}-${randomId()}.jpg`);
+      await S.uploadBytes(r, blob, { contentType: 'image/jpeg' });
+      return S.getDownloadURL(r);
+    },
   };
 }
 
@@ -983,6 +1052,7 @@ function createSampleStore() {
     },
     async signInAdmin() { isAdmin = true; userListeners.forEach((fn) => fn(info())); },
     async signOutAdmin() { isAdmin = false; userListeners.forEach((fn) => fn(info())); },
+    async uploadPhoto(blob) { return URL.createObjectURL(blob); },
   };
 }
 
@@ -1064,6 +1134,7 @@ function renderList() {
   els.list.innerHTML = list.map(rowHtml).join('');
   if (focusedId) els.list.querySelector(`[data-id="${CSS.escape(focusedId)}"]`)?.focus();
 
+  renderMarkers();
   if (list.length) { els.empty.hidden = true; return; }
   els.empty.hidden = false;
   if (!total) {
@@ -1210,14 +1281,23 @@ function refreshDetail() {
 
 function formHtml(s) {
   const isEdit = !!s;
-  const v = s ?? { restaurant: '', address: '', title: '', price: '', days: [1, 2, 3, 4, 5], start: '', end: '', finePrint: '', photoUrl: '' };
+  const v = s ?? { restaurant: '', address: '', title: '', price: '', days: [1, 2, 3, 4, 5], start: '', end: '', finePrint: '', photoUrl: '', placeId: '', lat: null, lng: null };
   const err = (f) => `<p class="field-error" data-error-for="${f}" id="err-${f}" hidden></p>`;
   return `
     <div class="sheet-head"><h2 id="sheet-title">${isEdit ? 'Edit special' : 'Add a special'}</h2>${closeBtn}</div>
     <form id="special-form" data-id="${isEdit ? esc(s.id) : ''}" novalidate>
       <div class="field">
         <label for="f-restaurant">Restaurant</label>
-        <input id="f-restaurant" name="restaurant" maxlength="60" autocomplete="off" value="${esc(v.restaurant)}" aria-describedby="err-restaurant">
+        <div class="combo">
+          <input id="f-restaurant" name="restaurant" maxlength="60" autocomplete="off" value="${esc(v.restaurant)}"
+            role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list" aria-describedby="place-hint err-restaurant"
+            data-picked-name="${v.placeId ? esc(v.restaurant) : ''}">
+          <ul class="place-list" id="place-list" role="listbox" aria-label="Restaurants" hidden></ul>
+        </div>
+        <p class="hint" id="place-hint"></p>
+        <input type="hidden" name="placeId" value="${esc(v.placeId || '')}">
+        <input type="hidden" name="lat" value="${typeof v.lat === 'number' ? v.lat : ''}">
+        <input type="hidden" name="lng" value="${typeof v.lng === 'number' ? v.lng : ''}">
         ${err('restaurant')}
       </div>
       <div class="field">
@@ -1261,9 +1341,10 @@ function formHtml(s) {
         ${err('finePrint')}
       </div>
       <div class="field">
-        <label for="f-photo">Photo link <span class="muted">(optional)</span></label>
-        <input id="f-photo" name="photoUrl" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://" value="${esc(v.photoUrl)}" aria-describedby="hint-photo err-photoUrl">
-        <p class="hint" id="hint-photo">Paste a link to a photo that’s already online.</p>
+        <span class="field-label" id="photo-label">Photo <span class="muted">(optional)</span></span>
+        <div class="photo-box" id="photo-box">${photoBoxHtml(v.photoUrl)}</div>
+        <input type="hidden" name="photoUrl" id="f-photo-url" value="${esc(v.photoUrl)}">
+        <input type="file" id="f-photo-file" accept="image/*" class="vh" tabindex="-1" aria-hidden="true">
         ${err('photoUrl')}
       </div>
       <p class="form-error" id="form-error" hidden></p>
@@ -1282,6 +1363,9 @@ function openForm(id) {
   showSheet();
   els.sheet.scrollTop = 0;
   $('#f-restaurant').focus();
+  placeSession = null;
+  updatePlaceHint();
+  ensurePlaces();
 }
 
 function aboutHtml() {
@@ -1400,6 +1484,7 @@ function readSpecialForm(form) {
   return {
     restaurant: fd.get('restaurant'), address: fd.get('address'), title: fd.get('title'), price: fd.get('price'),
     days: fd.getAll('days'), start: fd.get('start'), end: fd.get('end'), finePrint: fd.get('finePrint'), photoUrl: fd.get('photoUrl'),
+    placeId: fd.get('placeId'), lat: fd.get('lat'), lng: fd.get('lng'),
   };
 }
 
@@ -1538,7 +1623,9 @@ document.addEventListener('click', (e) => {
     case 'close-sheet': closeSheet(); break;
     case 'change-name': askName(); break;
     case 'name-cancel': els.nameDialog.close(); break;
-    case 'view': ui.view = el.dataset.view; renderList(); break;
+    case 'view': ui.view = el.dataset.view; renderList(); ensureMap(); break;
+    case 'photo-pick': $('#f-photo-file')?.click(); break;
+    case 'photo-remove': setPhoto(''); break;
     case 'filter': ui[el.dataset.filter] = !ui[el.dataset.filter]; renderList(); break;
     case 'price': { // tap a price to filter, tap it again (or "Show any price") to clear
       const max = Number(el.dataset.max);
@@ -1593,6 +1680,371 @@ document.addEventListener('error', (e) => {
   if (e.target instanceof HTMLImageElement && e.target.classList.contains('d-photo')) e.target.remove();
 }, true);
 
+
+/* ============================================================
+   Google Maps: loading
+   ============================================================ */
+let mapsPromise = null;
+let mapsBroken = false;
+
+function loadGoogleMaps() {
+  if (!GOOGLE_MAPS_KEY) return Promise.reject(new Error('No Google Maps key yet.'));
+  if (mapsPromise) return mapsPromise;
+  mapsPromise = new Promise((resolve, reject) => {
+    window.__tstMapsReady = () => resolve(window.google.maps);
+    // Google calls this when the key is rejected (wrong domain, API not turned on, etc.).
+    window.gm_authFailure = () => { mapsBroken = true; onMapsBroken(); };
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?' + new URLSearchParams({ key: GOOGLE_MAPS_KEY, v: 'weekly', loading: 'async', callback: '__tstMapsReady' });
+    script.async = true;
+    script.onerror = () => { mapsPromise = null; reject(new Error('Google Maps couldn’t load.')); };
+    document.head.appendChild(script);
+  });
+  return mapsPromise;
+}
+
+function onMapsBroken() {
+  showMapNote('The map couldn’t load', 'Google turned down the map key for this web address. Check the key’s website settings in Google Cloud.');
+  $('#map')?.classList.remove('is-live');
+  placesState = 'error';
+  closePlaceList();
+  updatePlaceHint();
+}
+
+function showMapNote(title, text) {
+  const note = $('#map-note');
+  if (!note) return;
+  note.innerHTML = `<strong>${esc(title)}</strong><p>${esc(text)}</p>`;
+}
+
+/* ============================================================
+   Google Maps: the map and its pins
+   ============================================================ */
+const gmap = { status: 'off', map: null, Marker: null, LatLngBounds: null, pins: new Map(), fitted: false };
+
+async function ensureMap() {
+  if (gmap.status !== 'off' || !GOOGLE_MAPS_KEY || mapsBroken) return;
+  if (getComputedStyle($('.map-col')).display === 'none') return; // phone, list view: load only when needed
+  gmap.status = 'loading';
+  try {
+    const g = await loadGoogleMaps();
+    const [{ Map }, { AdvancedMarkerElement }, { LatLngBounds }] = await Promise.all([
+      g.importLibrary('maps'), g.importLibrary('marker'), g.importLibrary('core'),
+    ]);
+    gmap.Marker = AdvancedMarkerElement;
+    gmap.LatLngBounds = LatLngBounds;
+    gmap.map = new Map($('#map-canvas'), {
+      center: { lat: CONFIG.office.lat, lng: CONFIG.office.lng },
+      zoom: 16,
+      mapId: GOOGLE_MAP_ID || 'DEMO_MAP_ID',
+      disableDefaultUI: true,
+      zoomControl: true,
+      clickableIcons: false,
+      gestureHandling: 'greedy',
+    });
+    const office = document.createElement('div');
+    office.className = 'pin-office';
+    office.textContent = CONFIG.office.label;
+    new AdvancedMarkerElement({ map: gmap.map, position: { lat: CONFIG.office.lat, lng: CONFIG.office.lng }, content: office, title: CONFIG.office.label, zIndex: 1 });
+    gmap.status = 'ready';
+    if (!mapsBroken) $('#map').classList.add('is-live');
+    renderMarkers();
+  } catch (err) {
+    console.error(err);
+    gmap.status = 'error';
+    showMapNote('The map couldn’t load', 'Check your connection and reload the page.');
+  }
+}
+
+function pinContent(s) {
+  const el = document.createElement('div');
+  el.className = 'pin-price';
+  el.textContent = formatPrice(s.price);
+  return el;
+}
+
+// Same filters as the list. Specials without a picked restaurant have no spot on the map.
+function renderMarkers() {
+  const unmappedNote = $('#map-unmapped');
+  if (gmap.status !== 'ready') { if (unmappedNote) unmappedNote.hidden = true; return; }
+  const list = loaded ? visibleSpecials(data.specials, stats, ui) : [];
+  const mapped = list.filter((s) => typeof s.lat === 'number' && typeof s.lng === 'number');
+
+  // Nudge pins that share a spot (two specials at one restaurant) so both stay tappable.
+  const seen = new Map();
+  const want = new Map();
+  for (const s of mapped) {
+    const key = `${s.lat.toFixed(5)},${s.lng.toFixed(5)}`;
+    const n = seen.get(key) || 0;
+    seen.set(key, n + 1);
+    want.set(s.id, { s, position: { lat: s.lat + n * 0.00012, lng: s.lng } });
+  }
+  for (const [id, pin] of gmap.pins) {
+    if (!want.has(id)) { pin.map = null; gmap.pins.delete(id); }
+  }
+  for (const [id, { s, position }] of want) {
+    const title = `${s.title} at ${s.restaurant}, ${formatPrice(s.price)}`;
+    let pin = gmap.pins.get(id);
+    if (!pin) {
+      pin = new gmap.Marker({ map: gmap.map, position, content: pinContent(s), title, gmpClickable: true });
+      let last = 0;
+      const open = () => { if (Date.now() - last < 500) return; last = Date.now(); if (store) openDetail(id); };
+      pin.addListener?.('click', open);
+      pin.addEventListener?.('gmp-click', open);
+      gmap.pins.set(id, pin);
+    } else {
+      pin.position = position;
+      pin.content = pinContent(s);
+      pin.title = title;
+    }
+  }
+  if (!gmap.fitted && want.size) {
+    const bounds = new gmap.LatLngBounds();
+    bounds.extend({ lat: CONFIG.office.lat, lng: CONFIG.office.lng });
+    for (const { position } of want.values()) bounds.extend(position);
+    gmap.map.fitBounds(bounds, 60);
+    gmap.fitted = true;
+  }
+  const missing = list.length - mapped.length;
+  if (unmappedNote) {
+    unmappedNote.hidden = !missing;
+    unmappedNote.textContent = missing === 1
+      ? '1 special isn’t on the map yet. Edit it and pick the restaurant from the list to add it.'
+      : `${missing} specials aren’t on the map yet. Edit them and pick the restaurant from the list to add them.`;
+  }
+}
+
+/* ============================================================
+   Restaurant search (Google Places) in the add/edit form
+   ============================================================ */
+let placesLib = null;
+let placesState = 'off';
+let placeSession = null;
+let placeResults = [];
+let placeActive = -1;
+let placeRequest = 0;
+let placeTimer = null;
+
+async function ensurePlaces() {
+  if (!GOOGLE_MAPS_KEY || mapsBroken || placesState !== 'off') return;
+  placesState = 'loading';
+  try {
+    const g = await loadGoogleMaps();
+    placesLib = await g.importLibrary('places');
+    placesState = 'ready';
+  } catch (err) {
+    console.error(err);
+    placesState = 'error';
+  }
+  updatePlaceHint();
+}
+
+function officeArea() {
+  const { lat, lng } = CONFIG.office;
+  return { north: lat + 0.02, south: lat - 0.02, east: lng + 0.025, west: lng - 0.025 };
+}
+
+function updatePlaceHint() {
+  const hint = $('#place-hint');
+  const form = $('#special-form');
+  if (!hint || !form) return;
+  const lat = Number(form.elements.lat.value), lng = Number(form.elements.lng.value);
+  if (form.elements.placeId.value && Number.isFinite(lat) && Number.isFinite(lng) && form.elements.lat.value !== '') {
+    const walk = walkMinutes({ lat, lng });
+    hint.innerHTML = `<span class="place-picked">${icon('pin')} On the map${walk ? `, ${walk} min walk from ${esc(CONFIG.office.label)}` : ''}.</span>`;
+  } else if (placesState === 'ready' || placesState === 'loading') {
+    hint.textContent = 'Start typing, then pick the restaurant from the list so it shows on the map.';
+  } else {
+    hint.textContent = '';
+  }
+}
+
+function clearPickedPlace(form) {
+  form.elements.placeId.value = '';
+  form.elements.lat.value = '';
+  form.elements.lng.value = '';
+  $('#f-restaurant').dataset.pickedName = '';
+}
+
+function closePlaceList() {
+  const list = $('#place-list');
+  const input = $('#f-restaurant');
+  placeResults = [];
+  placeActive = -1;
+  if (list) { list.hidden = true; list.innerHTML = ''; }
+  if (input) { input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+}
+
+function renderPlaceList() {
+  const list = $('#place-list');
+  const input = $('#f-restaurant');
+  if (!list || !input) return;
+  if (!placeResults.length) { closePlaceList(); return; }
+  list.innerHTML = placeResults.map((r, i) => `
+    <li role="option" id="place-opt-${i}" data-index="${i}" aria-selected="${i === placeActive}">
+      <span class="pl-main">${esc(r.main)}</span>${r.sub ? `<span class="pl-sub">${esc(r.sub)}</span>` : ''}
+    </li>`).join('');
+  list.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  if (placeActive >= 0) input.setAttribute('aria-activedescendant', `place-opt-${placeActive}`);
+  else input.removeAttribute('aria-activedescendant');
+}
+
+async function searchPlaces(text) {
+  if (placesState !== 'ready' || mapsBroken) return;
+  const mine = ++placeRequest;
+  try {
+    if (!placeSession) placeSession = new placesLib.AutocompleteSessionToken();
+    const { suggestions } = await placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+      input: text,
+      sessionToken: placeSession,
+      locationBias: officeArea(),
+    });
+    if (mine !== placeRequest || document.activeElement !== $('#f-restaurant')) return;
+    placeResults = (suggestions || [])
+      .map((x) => x.placePrediction)
+      .filter(Boolean)
+      .slice(0, 5)
+      .map((p) => ({
+        prediction: p,
+        main: p.mainText?.text || p.text?.text || '',
+        sub: p.secondaryText?.text || '',
+      }));
+    placeActive = -1;
+    renderPlaceList();
+  } catch (err) {
+    console.error(err);
+    closePlaceList();
+  }
+}
+
+async function pickPlace(index) {
+  const choice = placeResults[index];
+  const form = $('#special-form');
+  if (!choice || !form) return;
+  closePlaceList();
+  const input = $('#f-restaurant');
+  const hint = $('#place-hint');
+  if (hint) hint.textContent = 'Getting the address…';
+  try {
+    const place = choice.prediction.toPlace();
+    await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] });
+    const name = String(place.displayName || choice.main).slice(0, 60);
+    const street = String(place.formattedAddress || '').split(',')[0].trim().slice(0, 120);
+    input.value = name;
+    input.dataset.pickedName = name;
+    if (street) form.elements.address.value = street;
+    form.elements.placeId.value = place.id || '';
+    form.elements.lat.value = place.location ? place.location.lat() : '';
+    form.elements.lng.value = place.location ? place.location.lng() : '';
+  } catch (err) {
+    console.error(err);
+    clearPickedPlace(form);
+  }
+  placeSession = null; // a new search session starts with the next search
+  updatePlaceHint();
+  form.elements.title.focus();
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'f-restaurant') return;
+  const form = e.target.form;
+  // Typing over a picked restaurant means it's a different place now.
+  if (e.target.dataset.pickedName && e.target.value !== e.target.dataset.pickedName) { clearPickedPlace(form); updatePlaceHint(); }
+  clearTimeout(placeTimer);
+  const text = e.target.value.trim();
+  if (text.length < 2) { closePlaceList(); return; }
+  placeTimer = setTimeout(() => searchPlaces(text), 250);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.id !== 'f-restaurant' || !placeResults.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); placeActive = (placeActive + 1) % placeResults.length; renderPlaceList(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); placeActive = (placeActive - 1 + placeResults.length) % placeResults.length; renderPlaceList(); }
+  else if (e.key === 'Enter' && placeActive >= 0) { e.preventDefault(); pickPlace(placeActive); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePlaceList(); }
+});
+
+// mousedown (not click) so the pick happens before the box loses focus.
+document.addEventListener('mousedown', (e) => {
+  const opt = e.target.closest?.('#place-list [data-index]');
+  if (opt) { e.preventDefault(); pickPlace(Number(opt.dataset.index)); return; }
+  if (!e.target.closest?.('.combo')) closePlaceList();
+});
+document.addEventListener('focusout', (e) => {
+  if (e.target.id === 'f-restaurant') setTimeout(() => { if (document.activeElement?.id !== 'f-restaurant') closePlaceList(); }, 150);
+});
+
+/* ============================================================
+   Photos in the add/edit form
+   ============================================================ */
+function photoBoxHtml(url) {
+  if (url) {
+    return `<img class="photo-thumb" src="${esc(url)}" alt="Photo for this special" referrerpolicy="no-referrer">
+      <div class="photo-actions">
+        <button type="button" class="link-btn" data-action="photo-pick">Replace photo</button>
+        <button type="button" class="link-btn" data-action="photo-remove">Remove</button>
+      </div>`;
+  }
+  return `<button type="button" class="btn" data-action="photo-pick">Add a photo</button>
+    <span class="hint">The menu, the food or the sign. Take one or pick one from your photos.</span>`;
+}
+
+function setPhoto(url) {
+  const hidden = $('#f-photo-url');
+  const box = $('#photo-box');
+  if (!hidden || !box) return;
+  hidden.value = url;
+  box.innerHTML = photoBoxHtml(url);
+  const errBox = $('#err-photoUrl');
+  if (errBox) errBox.hidden = true;
+}
+
+// Phone photos are huge; shrink to at most 1600px on the long side before uploading.
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('read'))), 'image/jpeg', 0.82));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+document.addEventListener('change', async (e) => {
+  if (e.target.id !== 'f-photo-file') return;
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file) return;
+  const form = $('#special-form');
+  const box = $('#photo-box');
+  const errBox = $('#err-photoUrl');
+  const submit = form?.querySelector('[type="submit"]');
+  const showError = (msg) => { if (errBox) { errBox.textContent = msg; errBox.hidden = false; } };
+  if (!file.type.startsWith('image/')) { showError('That file isn’t a photo.'); return; }
+  const before = $('#f-photo-url').value;
+  box.innerHTML = '<span class="hint">Uploading photo…</span>';
+  if (submit) submit.disabled = true;
+  try {
+    let blob;
+    try { blob = await shrinkPhoto(file); } catch { throw Object.assign(new Error('Couldn’t read that photo. Try a JPG or PNG.'), { code: 'read' }); }
+    const url = await store.uploadPhoto(blob);
+    if ($('#photo-box')) setPhoto(url);
+  } catch (err) {
+    console.error(err);
+    if ($('#photo-box')) { setPhoto(before); showError(err.code === 'read' ? err.message : friendlyError(err)); }
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+});
+
 /* ============================================================
    Start
    ============================================================ */
@@ -1634,6 +2086,8 @@ async function start() {
     if (adminChanged && ui.sheet?.kind === 'detail') openDetail(ui.sheet.id);
   });
   store.subscribe((next) => { clearTimeout(slow); onData(next); }, (err) => { clearTimeout(slow); onLoadError(err); });
+  ensureMap();
+  matchMedia('(min-width: 960px)').addEventListener('change', ensureMap);
 }
 start();
 </script>
