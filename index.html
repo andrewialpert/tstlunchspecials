@@ -148,10 +148,10 @@ body[data-view="map"] .map-col { display: block; padding: 0 20px calc(96px + env
   font-weight: 700; color: var(--ink); font-size: 15px;
   border: 1.5px solid var(--line-strong); border-radius: 8px; padding: 6px 10px; background: #fff; min-height: 36px;
 }
-.chips { order: 3; flex-basis: 100%; display: flex; gap: 8px; }
+.chips { order: 3; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   border: 1.5px solid var(--line-strong); background: #fff; border-radius: 999px;
-  padding: 5px 14px; font-weight: 700; font-size: 14px; min-height: 34px;
+  padding: 5px 12px; font-weight: 700; font-size: 14px; font-stretch: 90%; min-height: 34px;
 }
 .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
 .sort-note { margin: 0; padding: 10px 20px; font-size: 14px; color: var(--muted); border-bottom: 1px solid var(--line); }
@@ -436,7 +436,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
       </div>
       <div class="chips" role="group" aria-label="Filters">
         <button type="button" class="chip" data-action="filter" data-filter="today" aria-pressed="true">Today</button>
-        <button type="button" class="chip" data-action="filter" data-filter="budget" aria-pressed="false">$15 and under</button>
+        <button type="button" class="chip" data-action="price" data-max="15" aria-pressed="false">Up to $15</button>
+        <button type="button" class="chip" data-action="price" data-max="20" aria-pressed="false">Up to $20</button>
+        <button type="button" class="chip" data-action="price" data-max="25" aria-pressed="false">Up to $25</button>
       </div>
       <label class="sort">Sort
         <select id="sort">
@@ -509,7 +511,6 @@ const CONFIG = {
   office: { lat: 40.7739, lng: -73.9541, label: 'TST' },
   outdatedAfterDays: 60,   // "May be outdated" after this long without a confirmation
   minRatingsForScore: 3,   // a special shows a score once this many people rate it
-  budgetPrice: 15,         // the "$15 and under" filter
 };
 
 // Add ?sample to the address to see the page with made-up specials (nothing is saved).
@@ -651,7 +652,7 @@ function byWalk(a, b) {
 function visibleSpecials(specials, stats, ui) {
   let list = specials.slice();
   if (ui.today) list = list.filter(runsToday);
-  if (ui.budget) list = list.filter((s) => s.price <= CONFIG.budgetPrice);
+  if (ui.maxPrice) list = list.filter((s) => s.price <= ui.maxPrice);
   if (ui.sort === 'closest') list.sort(byWalk);
   else if (ui.sort === 'newest') list.sort((a, b) => b.createdAt - a.createdAt);
   else {
@@ -989,7 +990,7 @@ function createSampleStore() {
    Page state
    ============================================================ */
 let store = null;
-const ui = { view: 'list', today: true, budget: false, sort: 'top', sheet: null };
+const ui = { view: 'list', today: true, maxPrice: null, sort: 'top', sheet: null };
 let data = { specials: [], ratings: [] };
 let loaded = false;
 let loadError = null;
@@ -1037,6 +1038,7 @@ function renderList() {
   els.date.textContent = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   document.querySelectorAll('[data-action="filter"]').forEach((b) => b.setAttribute('aria-pressed', String(ui[b.dataset.filter])));
   document.querySelectorAll('[data-action="view"]').forEach((b) => b.setAttribute('aria-pressed', String(ui.view === b.dataset.view)));
+  document.querySelectorAll('.chips [data-action="price"]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.max) === ui.maxPrice)));
   document.body.dataset.view = ui.view;
   els.sort.value = ui.sort;
   els.sortNote.hidden = ui.sort !== 'top' || !loaded || !data.specials.length;
@@ -1071,7 +1073,7 @@ function renderList() {
     els.empty.innerHTML = `<h3>Nothing matches these filters</h3><p>${ui.today ? 'Nothing listed is running today with these filters.' : 'No specials fit these filters.'}</p>
       <div class="empty-actions">
         ${ui.today ? '<button type="button" class="btn" data-action="filter" data-filter="today">Show all days</button>' : ''}
-        ${ui.budget ? '<button type="button" class="btn" data-action="filter" data-filter="budget">Show any price</button>' : ''}
+        ${ui.maxPrice ? '<button type="button" class="btn" data-action="price" data-max="any">Show any price</button>' : ''}
       </div>`;
   }
 }
@@ -1525,7 +1527,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const { action, id } = el.dataset;
-  if (!store && !['view', 'filter', 'reload'].includes(action)) return; // still connecting
+  if (!store && !['view', 'filter', 'price', 'reload'].includes(action)) return; // still connecting
   switch (action) {
     case 'open': openDetail(id); break;
     case 'add': openForm(null); break;
@@ -1538,6 +1540,12 @@ document.addEventListener('click', (e) => {
     case 'name-cancel': els.nameDialog.close(); break;
     case 'view': ui.view = el.dataset.view; renderList(); break;
     case 'filter': ui[el.dataset.filter] = !ui[el.dataset.filter]; renderList(); break;
+    case 'price': { // tap a price to filter, tap it again (or "Show any price") to clear
+      const max = Number(el.dataset.max);
+      ui.maxPrice = !max || ui.maxPrice === max ? null : max;
+      renderList();
+      break;
+    }
     case 'reload': location.reload(); break;
     case 'days-set': {
       const want = new Set(el.dataset.days.split(',').map(Number));
