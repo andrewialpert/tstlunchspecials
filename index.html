@@ -592,6 +592,7 @@ const GOOGLE_MAP_ID = 'b8a2785bcc26c0a44742dee8';
 const CONFIG = {
   // TST's main entrance on 2nd Ave (for the TST pin and walking times).
   office: { lat: 40.773179, lng: -73.955387, label: 'TST' },
+  mapZoom: 15,             // the map always opens centered on TST at this zoom (higher = closer in)
   outdatedAfterDays: 60,   // "May be outdated" after this long without a confirmation
   minRatingsForScore: 3,   // a special shows a score once this many people rate it
 };
@@ -1782,7 +1783,7 @@ async function ensureMap() {
     gmap.LatLngBounds = LatLngBounds;
     gmap.map = new Map($('#map-canvas'), {
       center: { lat: CONFIG.office.lat, lng: CONFIG.office.lng },
-      zoom: 16,
+      zoom: CONFIG.mapZoom,
       mapId: GOOGLE_MAP_ID || 'DEMO_MAP_ID',
       disableDefaultUI: true,
       zoomControl: true,
@@ -1844,13 +1845,6 @@ function renderMarkers() {
       pin.content = pinContent(s);
       pin.title = title;
     }
-  }
-  if (!gmap.fitted && want.size) {
-    const bounds = new gmap.LatLngBounds();
-    bounds.extend({ lat: CONFIG.office.lat, lng: CONFIG.office.lng });
-    for (const { position } of want.values()) bounds.extend(position);
-    gmap.map.fitBounds(bounds, 60);
-    gmap.fitted = true;
   }
   const missing = list.length - mapped.length;
   if (unmappedNote) {
