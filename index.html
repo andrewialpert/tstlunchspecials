@@ -346,7 +346,6 @@ dialog.viewer::backdrop { background: #0A1E2B; }
 .d-score strong { font-size: 28px; line-height: 1; }
 .d-score .ic { width: 24px; height: 24px; }
 .d-section > .d-note { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
-.d-note a { color: var(--teal); font-weight: 700; }
 .d-section > p { margin: 0; }
 .reviews { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 14px; }
 .review p { margin: 0; }
@@ -703,11 +702,6 @@ function walkMinutes(s) {
   const alongStreet = east * Math.cos(turn) - north * Math.sin(turn);
   const meters = Math.abs(alongAvenue) + Math.abs(alongStreet);
   return Math.max(1, Math.round(meters / 80)); // about 80 m a minute, so 20 blocks is about 20 minutes
-}
-
-function yelpUrl(s) {
-  const where = [s.address, 'New York, NY'].filter(Boolean).join(', ');
-  return `https://www.yelp.com/search?find_desc=${encodeURIComponent(s.restaurant)}&find_loc=${encodeURIComponent(where)}`;
 }
 
 function mapsUrl(s) {
@@ -1159,7 +1153,7 @@ function renderList() {
   document.body.dataset.view = ui.view;
   els.sort.value = ui.sort;
   els.sortNote.hidden = ui.sort !== 'top' || !loaded || !data.specials.length;
-  els.sortNote.textContent = 'Ranked by TST staff ratings. Each one is one person’s take, so scores can change.';
+  els.sortNote.textContent = 'Ranked by TST staff ratings, which are each one person’s take. For more in-depth reviews, look it up on Google or Yelp.';
 
   if (!loaded) {
     els.count.textContent = loadError ? '' : 'Loading specials…';
@@ -1277,7 +1271,7 @@ function reviewsHtml(s) {
   const head = st && st.count >= min
     ? `<p class="d-score">${icon('star', 'star-fill')}<strong><span class="vh">Rated </span>${st.avg.toFixed(1)}<span class="vh"> out of 5</span></strong><span class="muted">from ${st.count} TST staff rating${st.count === 1 ? '' : 's'}</span></p>`
     : st ? `<p class="muted">A score shows once ${min} people have rated this. ${st.count} so far.</p>` : '<p class="muted">No ratings yet.</p>';
-  const note = `<p class="d-note">Each rating is one person’s take, and scores can change as more people rate. For more reviews, check <a href="${esc(mapsUrl(s))}" target="_blank" rel="noopener noreferrer">Google</a> or <a href="${esc(yelpUrl(s))}" target="_blank" rel="noopener noreferrer">Yelp</a>.</p>`;
+  const note = '<p class="d-note">Each rating is one person’s take, and scores can change as more people rate. For more in-depth reviews, look it up on Google or Yelp.</p>';
   const written = ratingsFor(s.id)
     .filter((r) => r.review || me.isAdmin)
     .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -1445,7 +1439,7 @@ function aboutHtml() {
     <div class="sheet-head"><h2 id="sheet-title">How this works</h2>${closeBtn}</div>
     <div class="about">
       <p>Anyone at TST can add a special or fix one that’s out of date. Each special shows who added it and who last edited it.</p>
-      <p>Ratings are from TST staff. Each one is one person’s take, and scores can change as more people rate. For more reviews, check Google or Yelp.</p>
+      <p>Ratings are from TST staff. Each one is one person’s take, and scores can change as more people rate. For more in-depth reviews, look it up on Google or Yelp.</p>
       <p>Had a special and it’s still the same? Tap Still accurate. Specials nobody has confirmed in 2 months are marked May be outdated.</p>
       <p class="you" id="about-you">${me.name ? `You’re listed as <strong>${esc(me.name)}</strong>.` : 'You haven’t added your name yet.'}
         <button type="button" class="link-btn" data-action="change-name">${me.name ? 'Change name' : 'Add your name'}</button></p>
