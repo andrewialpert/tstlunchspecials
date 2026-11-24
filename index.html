@@ -317,10 +317,10 @@ dialog.small p { margin: 0 0 14px; color: var(--muted); }
   background: rgba(var(--shadow), 0.85); color: #fff;
   font-size: 13px; font-weight: 700; padding: 4px 9px; border-radius: 6px;
 }
-.d-photo-hint .on-mouse { display: none; }
+.d-photo-hint .on-mouse, .star-hint .on-mouse { display: none; }
 @media (hover: hover) and (pointer: fine) {
-  .d-photo-hint .on-touch { display: none; }
-  .d-photo-hint .on-mouse { display: inline; }
+  .d-photo-hint .on-touch, .star-hint .on-touch { display: none; }
+  .d-photo-hint .on-mouse, .star-hint .on-mouse { display: inline; }
 }
 dialog.viewer {
   width: 100vw; height: 100dvh; max-width: none; max-height: none;
@@ -349,22 +349,24 @@ dialog.viewer::backdrop { background: #0A1E2B; }
 .reviews { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 14px; }
 .review p { margin: 0; }
 .review-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 15px; }
+.sg { position: relative; display: inline-block; line-height: 0; }
+.sg-fill { position: absolute; left: 0; top: 0; width: 0; height: 100%; overflow: hidden; color: var(--teal); }
+.sg.is-half .sg-fill { width: 50%; }
+.sg.is-full .sg-fill { width: 100%; }
 .stars-row { display: inline-flex; color: var(--star-off); }
 .stars-row .ic { width: 14px; height: 14px; }
-.stars-row .on { color: var(--teal); }
 .credits { margin: 22px 0 0; font-size: 14px; color: var(--muted); }
 
-/* Star input */
+/* Star input: each star has a left half (x.5) and a right half (whole number) */
 .star-input { border: 0; padding: 0; margin: 0 0 12px; display: flex; gap: 2px; }
 .star-input input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.star-input label { padding: 2px; color: var(--star-off); cursor: pointer; border-radius: 6px; }
-.star-input label .ic { width: 38px; height: 38px; }
+.star-slot { position: relative; padding: 2px; color: var(--star-off); }
+.star-slot .ic { width: 38px; height: 38px; }
+.star-slot label { position: absolute; top: 0; bottom: 0; width: 50%; cursor: pointer; border-radius: 6px; }
+.star-slot label.half-l { left: 0; }
+.star-slot label.half-r { right: 0; }
 .star-input input:focus-visible + label { outline: 3px solid var(--ink); outline-offset: 0; }
-.star-input[data-value="1"] label:nth-of-type(-n+1),
-.star-input[data-value="2"] label:nth-of-type(-n+2),
-.star-input[data-value="3"] label:nth-of-type(-n+3),
-.star-input[data-value="4"] label:nth-of-type(-n+4),
-.star-input[data-value="5"] label:nth-of-type(-n+5) { color: var(--teal); }
+.star-hint { margin: -6px 0 12px; font-size: 14px; color: var(--muted); }
 
 /* Forms */
 .field { margin: 0 0 16px; padding: 0; border: 0; min-width: 0; }
@@ -996,7 +998,7 @@ function sampleData() {
   const r = (specialId, uid, name, stars, review, d) => ({ id: `${specialId}_${uid}`, specialId, uid, name, stars, review: review || '', createdAt: ago(d), updatedAt: ago(d) });
   const ratings = [
     r('s1', 'u1', 'Mike', 5, 'Burrito is huge. Go before 12:30 or the line is out the door.', 6),
-    r('s1', 'u2', 'Priya', 4, 'Ask for the salsa verde.', 10),
+    r('s1', 'u2', 'Priya', 4.5, 'Ask for the salsa verde.', 10),
     r('s1', 'u3', 'Dana', 5, '', 5),
     r('s1', 'u4', 'Josh', 4, '', 14),
     r('s1', 'u5', 'Ben', 4, '', 20),
@@ -1012,7 +1014,7 @@ function sampleData() {
     r('s5', 'u6', 'Rachel', 5, 'Get the salmon.', 17),
     r('s5', 'u7', 'Sarah', 5, '', 13),
     r('s5', 'u5', 'Ben', 4, '', 7),
-    r('s7', 'u3', 'Dana', 3, 'Curry is solid but the spring roll is tiny.', 8),
+    r('s7', 'u3', 'Dana', 3.5, 'Curry is solid but the spring roll is tiny.', 8),
     r('s7', 'u1', 'Mike', 4, '', 8),
     r('s7', 'u4', 'Josh', 3, '', 3),
     r('s8', 'u7', 'Sarah', 4, '', 6),
@@ -1192,9 +1194,21 @@ function renderList() {
    ============================================================ */
 const closeBtn = `<button type="button" class="icon-btn" data-action="close-sheet" aria-label="Close">${icon('close')}</button>`;
 
+const STAR_VALUES = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+const starFill = (value, i) => (value >= i ? 'is-full' : value >= i - 0.5 ? 'is-half' : '');
+const starGlyph = (fill) => `<span class="sg ${fill}">${icon('star')}<span class="sg-fill">${icon('star')}</span></span>`;
+const starWord = (v) => (v === 0.5 ? 'Half a star' : `${v} star${v === 1 ? '' : 's'}`);
+const starId = (v) => `star-${String(v).replace('.', '-')}`;
+
 function starsRow(n) {
-  return `<span class="stars-row" aria-label="${n} out of 5 stars">${[1, 2, 3, 4, 5].map((i) => icon('star', i <= n ? 'on' : '')).join('')}</span>`;
+  return `<span class="stars-row" aria-label="${n} out of 5 stars">${[1, 2, 3, 4, 5].map((i) => starGlyph(starFill(n, i))).join('')}</span>`;
 }
+
+// Fills the star picker to a value (the saved pick, or a mouse-hover preview).
+function paintStarInput(fieldset, value) {
+  fieldset.querySelectorAll('.sg').forEach((g, k) => { g.className = `sg ${starFill(value, k + 1)}`; });
+}
+const checkedStars = (fieldset) => Number(fieldset.querySelector('input[name="stars"]:checked')?.value ?? 0);
 
 function detailInfoHtml(s) {
   const walk = walkMinutes(s);
@@ -1234,8 +1248,12 @@ function rateFormHtml(s) {
       <h3>Your rating</h3>
       <fieldset class="star-input" data-value="${mine?.stars ?? 0}">
         <legend class="vh">Stars</legend>
-        ${[1, 2, 3, 4, 5].map((n) => `<input type="radio" name="stars" id="star-${n}" value="${n}" ${mine?.stars === n ? 'checked' : ''}><label for="star-${n}">${icon('star')}<span class="vh">${n} star${n === 1 ? '' : 's'}</span></label>`).join('')}
+        ${[1, 2, 3, 4, 5].map((i) => {
+          const radio = (v, side) => `<input type="radio" name="stars" id="${starId(v)}" value="${v}" ${mine?.stars === v ? 'checked' : ''}><label for="${starId(v)}" class="${side}" data-v="${v}"><span class="vh">${starWord(v)}</span></label>`;
+          return `<span class="star-slot">${starGlyph(starFill(mine?.stars ?? 0, i))}${radio(i - 0.5, 'half-l')}${radio(i, 'half-r')}</span>`;
+        }).join('')}
       </fieldset>
+      <p class="star-hint"><span class="on-touch">Tap</span><span class="on-mouse">Click</span> the left side of a star for a half star.</p>
       <label class="field-label" for="review">Review <span class="muted">(optional)</span></label>
       <textarea id="review" name="review" rows="2" maxlength="280" placeholder="What should people know?">${esc(mine?.review ?? '')}</textarea>
       <p class="form-error" id="rate-error" hidden></p>
@@ -1714,9 +1732,21 @@ document.addEventListener('submit', (e) => {
 document.addEventListener('change', (e) => {
   if (e.target === els.sort) { ui.sort = els.sort.value; renderList(); }
   if (e.target.name === 'stars') {
-    e.target.closest('fieldset').dataset.value = e.target.value;
+    const fs = e.target.closest('fieldset');
+    fs.dataset.value = e.target.value;
+    paintStarInput(fs, Number(e.target.value));
     const saved = $('#rate-saved'); if (saved) saved.textContent = '';
   }
+});
+
+document.addEventListener('pointerover', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const label = e.target.closest?.('.star-input label');
+  if (label) paintStarInput(label.closest('fieldset'), Number(label.dataset.v));
+});
+document.addEventListener('pointerout', (e) => {
+  const fs = e.target.closest?.('.star-input');
+  if (fs && !fs.contains(e.relatedTarget)) paintStarInput(fs, checkedStars(fs));
 });
 
 document.addEventListener('input', (e) => {
