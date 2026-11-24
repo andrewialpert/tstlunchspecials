@@ -345,6 +345,8 @@ dialog.viewer::backdrop { background: #0A1E2B; }
 .d-score { display: flex; align-items: center; gap: 6px; margin: 0; }
 .d-score strong { font-size: 28px; line-height: 1; }
 .d-score .ic { width: 24px; height: 24px; }
+.d-section > .d-note { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.d-note a { color: var(--teal); font-weight: 700; }
 .d-section > p { margin: 0; }
 .reviews { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 14px; }
 .review p { margin: 0; }
@@ -516,7 +518,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px
       <label class="sort">Sort
         <select id="sort">
           <option value="top">Top rated</option>
-          <option value="closest">Closest</option>
+          <option value="closest">Closest to TST</option>
           <option value="newest">Newest</option>
         </select>
       </label>
@@ -596,7 +598,7 @@ const CONFIG = {
   office: { lat: 40.773179, lng: -73.955387, label: 'TST' },
   mapZoom: 15,             // the map always opens centered on TST at this zoom (higher = closer in)
   outdatedAfterDays: 60,   // "May be outdated" after this long without a confirmation
-  minRatingsForScore: 3,   // a special shows a score once this many people rate it
+  minRatingsForScore: 1,   // a special shows a score once this many people rate it
 };
 
 // Add ?sample to the address to see the page with made-up specials (nothing is saved).
@@ -701,6 +703,11 @@ function walkMinutes(s) {
   const alongStreet = east * Math.cos(turn) - north * Math.sin(turn);
   const meters = Math.abs(alongAvenue) + Math.abs(alongStreet);
   return Math.max(1, Math.round(meters / 80)); // about 80 m a minute, so 20 blocks is about 20 minutes
+}
+
+function yelpUrl(s) {
+  const where = [s.address, 'New York, NY'].filter(Boolean).join(', ');
+  return `https://www.yelp.com/search?find_desc=${encodeURIComponent(s.restaurant)}&find_loc=${encodeURIComponent(where)}`;
 }
 
 function mapsUrl(s) {
@@ -986,7 +993,7 @@ function sampleData() {
     createdBy: 'sample', editedAt: null, editedByName: null, ...o,
   });
   const specials = [
-    sp('s1', { restaurant: 'Lexington Taqueria', address: '1520 3rd Ave', lat: 40.7726, lng: -73.9567, title: 'Burrito + beer', price: 15, days: [1, 2, 3, 4, 5], start: '11:00', end: '15:00', finePrint: 'Swap the beer for a soft drink.', createdAt: ago(24), createdByName: 'Sarah', confirmedAt: ago(5), confirmedByName: 'Dana' }),
+    sp('s1', { restaurant: 'Lexington Taqueria', address: '1520 3rd Ave', lat: 40.7726, lng: -73.9567, title: 'Burrito + soda', price: 15, days: [1, 2, 3, 4, 5], start: '11:00', end: '15:00', finePrint: 'Chips and salsa are $2 more.', createdAt: ago(24), createdByName: 'Sarah', confirmedAt: ago(5), confirmedByName: 'Dana' }),
     sp('s2', { restaurant: 'Golden Lotus Kitchen', address: '1641 2nd Ave', lat: 40.7752, lng: -73.9518, title: 'Lunch combo with rice and an egg roll', price: 11.5, days: [1, 2, 3, 4, 5, 6], start: '11:00', end: '15:30', finePrint: 'Soup instead of the egg roll for $1 more.', createdAt: ago(40), createdByName: 'Mike', confirmedAt: ago(12), confirmedByName: 'Ben', editedAt: ago(12), editedByName: 'Ben' }),
     sp('s3', { restaurant: 'Sal’s Slice Shop', address: '1489 1st Ave', lat: 40.7718, lng: -73.9506, title: '2 slices + a can of soda', price: 8, days: [0, 1, 2, 3, 4, 5, 6], finePrint: 'Plain or pepperoni only.', createdAt: ago(31), createdByName: 'Josh', confirmedAt: ago(2), confirmedByName: 'Josh' }),
     sp('s4', { restaurant: 'Yorkville Deli & Grocery', address: '1402 2nd Ave', lat: 40.7716, lng: -73.9558, title: 'Half sandwich + cup of soup', price: 13.95, days: [1, 2, 3, 4, 5], start: '11:00', end: '16:00', finePrint: 'Soup changes daily.', createdAt: ago(9), createdByName: 'Priya', confirmedAt: ago(9), confirmedByName: 'Priya' }),
@@ -1125,7 +1132,7 @@ function scoreHtml(id) {
   const st = stats.get(id);
   if (!st) return '<span class="score-none">Not rated yet</span>';
   if (st.count < CONFIG.minRatingsForScore) return `<span class="score-none">${st.count} rating${st.count === 1 ? '' : 's'} so far</span>`;
-  return `<span class="score">${icon('star', 'star-fill')}<strong><span class="vh">Rated </span>${st.avg.toFixed(1)}<span class="vh"> out of 5</span></strong><span class="score-count">${st.count} ratings</span></span>`;
+  return `<span class="score">${icon('star', 'star-fill')}<strong><span class="vh">Rated </span>${st.avg.toFixed(1)}<span class="vh"> out of 5</span></strong><span class="score-count">${st.count} rating${st.count === 1 ? '' : 's'}</span></span>`;
 }
 
 function rowHtml(s) {
@@ -1152,7 +1159,7 @@ function renderList() {
   document.body.dataset.view = ui.view;
   els.sort.value = ui.sort;
   els.sortNote.hidden = ui.sort !== 'top' || !loaded || !data.specials.length;
-  els.sortNote.textContent = 'Ranked by TST staff ratings.';
+  els.sortNote.textContent = 'Ranked by TST staff ratings. Each one is one person’s take, so scores can change.';
 
   if (!loaded) {
     els.count.textContent = loadError ? '' : 'Loading specials…';
@@ -1268,14 +1275,15 @@ function reviewsHtml(s) {
   const st = stats.get(s.id);
   const min = CONFIG.minRatingsForScore;
   const head = st && st.count >= min
-    ? `<p class="d-score">${icon('star', 'star-fill')}<strong><span class="vh">Rated </span>${st.avg.toFixed(1)}<span class="vh"> out of 5</span></strong><span class="muted">from ${st.count} TST staff ratings</span></p>`
-    : `<p class="muted">A score shows once ${min} people have rated this. ${st ? `${st.count} so far.` : 'No ratings yet.'}</p>`;
+    ? `<p class="d-score">${icon('star', 'star-fill')}<strong><span class="vh">Rated </span>${st.avg.toFixed(1)}<span class="vh"> out of 5</span></strong><span class="muted">from ${st.count} TST staff rating${st.count === 1 ? '' : 's'}</span></p>`
+    : st ? `<p class="muted">A score shows once ${min} people have rated this. ${st.count} so far.</p>` : '<p class="muted">No ratings yet.</p>';
+  const note = `<p class="d-note">Each rating is one person’s take, and scores can change as more people rate. For more reviews, check <a href="${esc(mapsUrl(s))}" target="_blank" rel="noopener noreferrer">Google</a> or <a href="${esc(yelpUrl(s))}" target="_blank" rel="noopener noreferrer">Yelp</a>.</p>`;
   const written = ratingsFor(s.id)
     .filter((r) => r.review || me.isAdmin)
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .map((r) => `<li class="review"><p class="review-head"><strong>${esc(r.name)}</strong>${starsRow(r.stars)}<span class="muted">${relTime(r.updatedAt)}</span>${me.isAdmin ? `<button type="button" class="link-btn danger-link" data-action="delete-rating" data-rid="${esc(r.id)}">Delete</button>` : ''}</p>${r.review ? `<p>${esc(r.review)}</p>` : ''}</li>`)
     .join('');
-  return `<h3>Staff rating</h3>${head}${written ? `<ul class="reviews">${written}</ul>` : ''}`;
+  return `<h3>Staff rating</h3>${head}${note}${written ? `<ul class="reviews">${written}</ul>` : ''}`;
 }
 
 function creditsHtml(s) {
@@ -1371,7 +1379,7 @@ function formHtml(s) {
       </div>
       <div class="field">
         <label for="f-title">The special</label>
-        <input id="f-title" name="title" maxlength="80" autocomplete="off" placeholder="e.g. Burrito + beer" value="${esc(v.title)}" aria-describedby="err-title">
+        <input id="f-title" name="title" maxlength="80" autocomplete="off" placeholder="e.g. Soup + half sandwich" value="${esc(v.title)}" aria-describedby="err-title">
         ${err('title')}
       </div>
       <div class="field">
@@ -1401,7 +1409,7 @@ function formHtml(s) {
       </fieldset>
       <div class="field">
         <label for="f-fine">Fine print <span class="muted">(optional)</span></label>
-        <textarea id="f-fine" name="finePrint" rows="2" maxlength="200" placeholder="e.g. Swap the beer for a soft drink." aria-describedby="err-finePrint">${esc(v.finePrint)}</textarea>
+        <textarea id="f-fine" name="finePrint" rows="2" maxlength="200" placeholder="e.g. Brown rice is $1 extra." aria-describedby="err-finePrint">${esc(v.finePrint)}</textarea>
         ${err('finePrint')}
       </div>
       <div class="field">
@@ -1437,7 +1445,7 @@ function aboutHtml() {
     <div class="sheet-head"><h2 id="sheet-title">How this works</h2>${closeBtn}</div>
     <div class="about">
       <p>Anyone at TST can add a special or fix one that’s out of date. Each special shows who added it and who last edited it.</p>
-      <p>Ratings are from TST staff. A special gets a score once ${CONFIG.minRatingsForScore} people rate it.</p>
+      <p>Ratings are from TST staff. Each one is one person’s take, and scores can change as more people rate. For more reviews, check Google or Yelp.</p>
       <p>Had a special and it’s still the same? Tap Still accurate. Specials nobody has confirmed in 2 months are marked May be outdated.</p>
       <p class="you" id="about-you">${me.name ? `You’re listed as <strong>${esc(me.name)}</strong>.` : 'You haven’t added your name yet.'}
         <button type="button" class="link-btn" data-action="change-name">${me.name ? 'Change name' : 'Add your name'}</button></p>
